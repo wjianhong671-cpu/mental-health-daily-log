@@ -1,0 +1,155 @@
+<!-- miniprogram/pages/timeline/timeline.wxml -->
+<view style="padding:16px;background:#f6f6f6;min-height:100vh;">
+
+<!-- 标题 -->
+<view style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+  <view style="font-size:20px;font-weight:700;">复诊时间轴</view>
+</view>
+
+<!-- 过滤按钮 -->
+<view style="display:flex;gap:10px;margin-bottom:12px;">
+  <view
+    data-filter="all"
+    bindtap="setFilter"
+    style="padding:10px 14px;border-radius:10px;font-weight:600;
+           background:{{filter==='all' ? '#e8f5e9' : '#fff'}};
+           color:{{filter==='all' ? '#2e7d32' : '#333'}};
+           border:1px solid {{filter==='all' ? '#b7e1c0' : '#eee'}};">
+    全部
+  </view>
+
+  <view
+    data-filter="daily"
+    bindtap="setFilter"
+    style="padding:10px 14px;border-radius:10px;font-weight:600;
+           background:{{filter==='daily' ? '#e8f5e9' : '#fff'}};
+           color:{{filter==='daily' ? '#2e7d32' : '#333'}};
+           border:1px solid {{filter==='daily' ? '#b7e1c0' : '#eee'}};">
+    每日记录
+  </view>
+
+  <view
+    data-filter="lab"
+    bindtap="setFilter"
+    style="padding:10px 14px;border-radius:10px;font-weight:600;
+           background:{{filter==='lab' ? '#e8f5e9' : '#fff'}};
+           color:{{filter==='lab' ? '#2e7d32' : '#333'}};
+           border:1px solid {{filter==='lab' ? '#b7e1c0' : '#eee'}};">
+    检查/复查
+  </view>
+</view>
+
+<!-- 快捷入口 -->
+<view style="display:flex;gap:12px;margin-bottom:14px;">
+  <view
+    bindtap="goIndex"
+    style="flex:1;background:#fff;border:1px solid #eee;border-radius:12px;
+           padding:12px;font-weight:700;color:#2e7d32;text-align:center;">
+    去填写今日记录
+  </view>
+
+  <view
+    bindtap="goAddLab"
+    style="flex:1;background:#fff;border:1px solid #eee;border-radius:12px;
+           padding:12px;font-weight:700;color:#2e7d32;text-align:center;">
+    添加检查/复查（下一步做）
+  </view>
+</view>
+
+<!-- 列表 -->
+<block wx:if="{{items.length === 0}}">
+  <view style="background:#fff;border:1px solid #eee;border-radius:16px;padding:18px;color:#999;">
+    暂无记录
+    <view style="margin-top:8px;font-size:12px;color:#bbb;">
+      你可以先去首页保存一条“情绪 + 睡眠”记录，时间轴就会自动出现。
+    </view>
+  </view>
+</block>
+
+<block wx:else>
+  <view wx:for="{{items}}" wx:key="key" style="margin-bottom:12px;">
+
+    <!-- ========== 每日记录卡片 ========== -->
+    <block wx:if="{{item.type === 'daily'}}">
+      <view style="background:#fff;border:1px solid #eee;border-radius:16px;padding:16px;">
+
+        <!-- 卡片标题行 -->
+        <view style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <view style="font-size:16px;font-weight:800;">🗓️ 每日记录</view>
+          <view style="font-size:12px;color:#666;">{{item.date}}</view>
+        </view>
+
+        <!-- 主信息 -->
+        <view style="font-size:14px;color:#111;line-height:1.8;">
+          <view>情绪：{{item.moodText}}</view>
+          <view>睡眠：{{item.sleepText}}</view>
+          <view>睡眠问题：{{item.sleepIssuesText}}</view>
+
+          <view style="margin-top:6px;">用药方案：{{item.planText}}</view>
+          <view>依从性：{{item.takeMedText}}</view>
+
+          <view style="margin-top:6px;">
+            不适/副作用：{{item.sideEffectsText}}
+            <text style="color:#999;">　严重度：{{item.sideEffectSeverityText}}</text>
+          </view>
+
+          <block wx:if="{{item.sideEffectNote}}">
+            <view style="color:#666;">备注：{{item.sideEffectNote}}</view>
+          </block>
+        </view>
+
+        <!-- 时间 -->
+        <block wx:if="{{item.timeText}}">
+          <view style="margin-top:10px;font-size:12px;color:#999;">
+            {{item.timeText}}
+          </view>
+        </block>
+
+      </view>
+    </block>
+
+    <!-- ========== 检查/复查卡片 ========== -->
+    <block wx:elif="{{item.type === 'lab'}}">
+      <view style="background:#fff;border:1px solid #eee;border-radius:16px;padding:16px;">
+
+        <view style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <view style="font-size:16px;font-weight:800;">🧪 检查/复查</view>
+          <view style="font-size:12px;color:#666;">{{item.date}}</view>
+        </view>
+
+        <view style="font-size:14px;color:#111;line-height:1.8;">
+          <view>类型：{{item.labType}}</view>
+          <block wx:if="{{item.hospital}}">
+            <view>医院：{{item.hospital}}</view>
+          </block>
+          <block wx:if="{{item.note}}">
+            <view>备注：{{item.note}}</view>
+          </block>
+
+          <block wx:if="{{item.images && item.images.length}}">
+            <view style="margin-top:6px;color:#666;">已上传图片：{{item.images.length}} 张</view>
+          </block>
+        </view>
+
+        <block wx:if="{{item.timeText}}">
+          <view style="margin-top:10px;font-size:12px;color:#999;">
+            {{item.timeText}}
+          </view>
+        </block>
+
+      </view>
+    </block>
+
+    <!-- ========== 兜底卡片 ========== -->
+    <block wx:else>
+      <view style="background:#fff;border:1px solid #eee;border-radius:16px;padding:16px;color:#999;">
+        未识别的数据类型
+      </view>
+    </block>
+
+  </view>
+</block>
+
+<!-- 底部留白 -->
+<view style="height:20px;"></view>
+</view>

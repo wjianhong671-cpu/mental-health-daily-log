@@ -1,0 +1,186 @@
+<view style="padding:24px;">
+
+<!-- 标题 -->
+<view style="font-size:18px;font-weight:600;margin-bottom:12px;">
+  今天的情绪状态
+</view>
+
+<!-- 去用药方案 / 去时间轴 -->
+<view style="margin-bottom:16px; display:flex; gap:12px;">
+  <button size="mini" plain="true" bindtap="goPlan">设置 / 更新用药方案</button>
+  <button size="mini" plain="true" bindtap="goTimeline">复诊时间轴</button>
+</view>
+
+<!-- 情绪选择 -->
+<view style="margin-bottom:16px;">
+  <button data-mood="1" bindtap="selectMood">😞 很低落</button>
+  <button data-mood="3" bindtap="selectMood">🙂 一般</button>
+  <button data-mood="5" bindtap="selectMood">😄 很好</button>
+</view>
+
+<!-- 睡眠质量 -->
+<view style="margin-bottom:16px;">
+  <view style="font-size:16px;font-weight:600;margin-bottom:8px;">
+    昨晚睡眠质量（必选）
+  </view>
+
+  <radio-group bindchange="onSleepQualityChange">
+    <label style="display:block;padding:6px 0;">
+      <radio value="1" checked="{{sleepQuality==1}}" /> 很差
+    </label>
+    <label style="display:block;padding:6px 0;">
+      <radio value="2" checked="{{sleepQuality==2}}" /> 一般
+    </label>
+    <label style="display:block;padding:6px 0;">
+      <radio value="3" checked="{{sleepQuality==3}}" /> 还可以
+    </label>
+    <label style="display:block;padding:6px 0;">
+      <radio value="4" checked="{{sleepQuality==4}}" /> 不错
+    </label>
+    <label style="display:block;padding:6px 0;">
+      <radio value="5" checked="{{sleepQuality==5}}" /> 很好
+    </label>
+  </radio-group>
+</view>
+
+<!-- 睡眠问题 -->
+<view style="margin-bottom:16px;">
+  <view style="font-size:16px;font-weight:600;margin-bottom:8px;">
+    睡眠问题（可多选）
+  </view>
+
+  <checkbox-group bindchange="onSleepIssuesChange">
+    <label style="display:block;padding:6px 0;">
+      <checkbox value="insomnia" checked="{{sleepIssuesMap.insomnia}}" /> 入睡困难
+    </label>
+    <label style="display:block;padding:6px 0;">
+      <checkbox value="early_wake" checked="{{sleepIssuesMap.early_wake}}" /> 早醒
+    </label>
+    <label style="display:block;padding:6px 0;">
+      <checkbox value="dreams" checked="{{sleepIssuesMap.dreams}}" /> 多梦 / 噩梦
+    </label>
+    <label style="display:block;padding:6px 0;">
+      <checkbox value="daytime_sleepy" checked="{{sleepIssuesMap.daytime_sleepy}}" /> 白天嗜睡
+    </label>
+    <label style="display:block;padding:6px 0;">
+      <checkbox value="none" checked="{{sleepIssuesMap.none}}" /> 无
+    </label>
+  </checkbox-group>
+</view>
+
+<!-- 今日用药记录 -->
+<view style="margin-bottom:16px;">
+  <view style="font-size:16px;font-weight:600;margin-bottom:8px;">
+    今天用药记录（可选）
+  </view>
+
+  <checkbox-group bindchange="onTakeMedChange">
+    <label style="display:block;padding:6px 0;">
+      <checkbox value="morning" checked="{{takeMedMap.morning}}" /> 早
+    </label>
+    <label style="display:block;padding:6px 0;">
+      <checkbox value="noon" checked="{{takeMedMap.noon}}" /> 中
+    </label>
+    <label style="display:block;padding:6px 0;">
+      <checkbox value="night" checked="{{takeMedMap.night}}" /> 晚
+    </label>
+  </checkbox-group>
+</view>
+
+<!-- 不适 / 副作用 -->
+<view style="margin-bottom:16px;">
+  <view style="font-size:16px;font-weight:600;margin-bottom:8px;">
+    今天有没有不舒服 / 适应期反应（可选）
+  </view>
+
+  <checkbox-group bindchange="onSideEffectsChange">
+    <label style="display:block;padding:6px 0;">
+      <checkbox value="sleepy" checked="{{sideEffectsMap.sleepy}}" /> 嗜睡 / 发困
+    </label>
+    <label style="display:block;padding:6px 0;">
+      <checkbox value="dizzy" checked="{{sideEffectsMap.dizzy}}" /> 头晕
+    </label>
+    <label style="display:block;padding:6px 0;">
+      <checkbox value="nausea" checked="{{sideEffectsMap.nausea}}" /> 恶心 / 胃不适
+    </label>
+    <label style="display:block;padding:6px 0;">
+      <checkbox value="anxiety" checked="{{sideEffectsMap.anxiety}}" /> 焦虑 / 坐立不安
+    </label>
+    <label style="display:block;padding:6px 0;">
+      <checkbox value="none" checked="{{sideEffectsMap.none}}" /> 没有
+    </label>
+  </checkbox-group>
+
+  <view style="margin-top:12px;">
+    <view style="font-weight:600;margin-bottom:6px;">
+      对生活的影响程度（可选）
+    </view>
+
+    <radio-group bindchange="onSideEffectSeverityChange">
+      <label style="display:block;padding:4px 0;">
+        <radio value="0" checked="{{sideEffectSeverity==0}}" /> 不明显
+      </label>
+      <label style="display:block;padding:4px 0;">
+        <radio value="1" checked="{{sideEffectSeverity==1}}" /> 轻度
+      </label>
+      <label style="display:block;padding:4px 0;">
+        <radio value="2" checked="{{sideEffectSeverity==2}}" /> 中度
+      </label>
+      <label style="display:block;padding:4px 0;">
+        <radio value="3" checked="{{sideEffectSeverity==3}}" /> 重度
+      </label>
+    </radio-group>
+  </view>
+
+  <textarea
+    value="{{sideEffectNote}}"
+    placeholder="例如：早上吃完药头晕 20 分钟；白天困但还能上班"
+    auto-height="true"
+    maxlength="200"
+    bindinput="onSideEffectNoteInput"
+    style="width:100%;min-height:88px;border:1px solid #eee;border-radius:12px;padding:10px;box-sizing:border-box;margin-top:8px;"
+  ></textarea>
+</view>
+
+<!-- 保存 -->
+<view style="margin-bottom:24px;">
+  <button type="primary" bindtap="saveRecord">保存今天的记录</button>
+</view>
+
+<!-- 最近记录 -->
+<view style="font-size:16px;font-weight:600;margin-bottom:12px;">
+  最近记录
+</view>
+
+<block wx:if="{{records.length === 0}}">
+  <view style="color:#999;">暂无记录</view>
+</block>
+
+<block wx:else>
+  <view wx:for="{{records}}" wx:key="_id"
+    style="padding:12px 0;border-bottom:1px solid #eee;">
+
+    <view>
+      日期：{{item.date}}　心情：{{item.mood}}　睡眠：{{item.sleepQuality}}
+    </view>
+
+    <view style="color:#999;font-size:12px;">
+      睡眠问题：{{item.sleepIssuesText}}
+    </view>
+
+    <view style="color:#999;font-size:12px;">
+      用药记录：{{item.takeMedText}}
+    </view>
+
+    <view style="color:#999;font-size:12px;">
+      不适：{{item.sideEffectsText}}　严重度：{{item.sideEffectSeverityText}}
+    </view>
+
+    <view style="color:#999;font-size:12px;">
+      {{item.timeText}}
+    </view>
+
+  </view>
+</block>
+
+</view>
