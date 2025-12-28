@@ -1,0 +1,54 @@
+# Mental Health Daily Log  
+心理健康每日日志
+
+This project provides simple templates and a WeChat Mini Program
+to help individuals track daily mental health status, including mood,
+sleep, medication usage, and subjective experiences.
+
+The focus of this project is **recording and reflection**, not diagnosis
+or treatment.
+
+---
+
+## Purpose
+
+Many people with mental health conditions find it difficult to clearly
+remember and describe their daily experiences when visiting a doctor.
+This project aims to help users:
+
+- Record daily mood and emotional changes
+- Track sleep quality and daily routines
+- Log medication usage and subjective side effects
+- Prepare clearer information for medical consultations
+
+---
+
+## What this project IS
+
+- A personal mental health tracking tool
+- A daily log for self-observation
+- A support tool for communication with healthcare professionals
+
+---
+
+## What this project is NOT
+
+- Not medical advice
+- Not a diagnostic tool
+- Not a replacement for professional healthcare
+
+---
+
+## Disclaimer
+
+This project is for personal reference and self-recording only.
+It does **not** provide medical advice, diagnosis, or treatment.
+Users should always consult qualified healthcare professionals
+for medical decisions.
+
+---
+
+## Status
+
+This project is under active development.
+Structure and features may change as it evolves.
