@@ -25,7 +25,9 @@ Page({
   goIndex() {
     wx.navigateTo({ url: '/pages/index/index' })
   },
-
+  goReview() {
+    wx.navigateTo({ url: '/pages/review/review' })
+  },
   // 去新增检查 / 复查页面
   goAddLab() {
     wx.navigateTo({ url: '/pages/lab/lab' })
@@ -79,48 +81,56 @@ Page({
     const moodMap = { 1: '很低落', 3: '一般', 5: '很好' }
     const sleepMap = { 1: '很差', 2: '一般', 3: '还可以', 4: '不错', 5: '很好' }
     const severityMap = { 0: '不明显', 1: '轻度', 2: '中度', 3: '重度' }
-
-    const moodText = moodMap[d.mood] || (d.mood === 0 ? '0' : (d.mood ? String(d.mood) : '未填写'))
-    const sleepText = sleepMap[d.sleepQuality] || (d.sleepQuality ? String(d.sleepQuality) : '未填写')
-
+  
+    const moodText =
+      moodMap[d.mood] ||
+      (d.mood === 0 ? '0' : (d.mood ? String(d.mood) : '未填写'))
+  
+    const sleepText =
+      sleepMap[d.sleepQuality] ||
+      (d.sleepQuality ? String(d.sleepQuality) : '未填写')
+  
+    // ✅ 睡眠时长（小时）
+    const sleepDurationHour = d.sleepDurationHour
+    const sleepDurationText =
+      (sleepDurationHour === null || sleepDurationHour === undefined)
+        ? '未填写'
+        : (sleepDurationHour + ' 小时')
+  
     const sleepIssuesText = this._sleepIssuesToText(d.sleepIssues || [])
-
+  
     const sideEffectsText = this._sideEffectsToText(d.sideEffects || [])
     const sideEffectSeverityText =
       (d.sideEffectSeverity === null || d.sideEffectSeverity === undefined)
         ? '未选择'
         : (severityMap[d.sideEffectSeverity] || String(d.sideEffectSeverity))
-
-    // 今日是否按时服药（你目前 daily_records 里有 takeMedText / takeMedMap）
+  
     const takeMedText = d.takeMedText || '未填写'
-
-    // 方案快照（planSnapshot）做成一行“医生摘要”
     const planText = this._planSnapshotToText(d.planSnapshot)
-
+  
     const sortTime = this._getSortTime(d.createdAt || d.updatedAt, d.date)
-
+  
     return {
       key: `daily_${d._id}`,
       type: 'daily',
-
+  
       date: d.date || '',
       timeText: d.timeText || d.updatedTimeText || '',
-
       sortTime,
-
-      // 核心展示字段（医生可读）
+  
+      // 核心展示字段
       moodText,
       sleepText,
+      sleepDurationText,   // ⭐ 新增
       sleepIssuesText,
-
+  
       planText,
       takeMedText,
-
+  
       sideEffectsText,
       sideEffectSeverityText,
       sideEffectNote: d.sideEffectNote || '',
-
-      // 保留原始（如果你后面要点进详情页）
+  
       raw: d
     }
   },

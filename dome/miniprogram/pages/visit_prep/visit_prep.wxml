@@ -1,0 +1,87 @@
+<view class="page">
+  <view class="container">
+    <view class="header">
+      <view class="title">复诊准备</view>
+      <view class="subtitle">把你这次最想让医生关注的重点先写清楚</view>
+    </view>
+
+    <!-- 卡片：最困扰的问题 -->
+    <view class="card">
+      <view class="card-title">最困扰的问题（本次复诊）</view>
+
+      <view class="field">
+        <view class="label">问题 1 <text class="required">*</text></view>
+        <textarea
+          class="textarea"
+          placeholder="例如：最近睡眠质量下降，经常早醒；白天焦虑明显影响工作……"
+          value="{{concern1}}"
+          maxlength="200"
+          auto-height
+          bindinput="onConcern1Input"
+        />
+      </view>
+
+      <view class="field">
+        <view class="label">问题 2（可选）</view>
+        <textarea
+          class="textarea"
+          placeholder="例如：白天注意力不集中；胃口变化明显……"
+          value="{{concern2}}"
+          maxlength="200"
+          auto-height
+          bindinput="onConcern2Input"
+        />
+      </view>
+    </view>
+
+    <!-- 卡片：复诊目的 -->
+    <view class="card">
+      <view class="card-title">本次复诊主要目的</view>
+      <view class="hint">可多选。勾选“其他”后可补充说明。</view>
+
+      <checkbox-group class="check-group" bindchange="onGoalsChange">
+        <label class="check-item">
+          <checkbox class="cb" value="side_effect" checked="{{goalsMap.side_effect}}" />
+          <view class="check-text">副作用较明显，想讨论是否调整</view>
+        </label>
+
+        <label class="check-item">
+          <checkbox class="cb" value="improve" checked="{{goalsMap.improve}}" />
+          <view class="check-text">症状有好转，是否可以维持/减量</view>
+        </label>
+
+        <label class="check-item">
+          <checkbox class="cb" value="relapse" checked="{{goalsMap.relapse}}" />
+          <view class="check-text">症状反复，想重新评估方案</view>
+        </label>
+
+        <label class="check-item">
+          <checkbox class="cb" value="other" checked="{{goalsMap.other}}" />
+          <view class="check-text">其他</view>
+        </label>
+      </checkbox-group>
+
+      <view wx:if="{{goalsMap.other}}" class="field">
+        <view class="label">其他说明</view>
+        <textarea
+          class="textarea"
+          placeholder="请简要说明你希望医生重点讨论的内容"
+          value="{{goalOther}}"
+          maxlength="200"
+          auto-height
+          bindinput="onGoalOtherInput"
+        />
+      </view>
+    </view>
+
+    <!-- 底部操作 -->
+    <view class="footer">
+      <button class="btn" bindtap="onSave">保存复诊重点</button>
+      <view class="meta">
+        <text wx:if="{{lastSavedText}}">上次保存：{{lastSavedText}}</text>
+      </view>
+    </view>
+
+    <view class="safe-space"></view>
+  </view>
+</view>

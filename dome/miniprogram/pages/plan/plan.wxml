@@ -1,127 +1,118 @@
-<view style="padding:24px;">
+<view style="padding:20px;background:#f6f6f6;min-height:100vh;">
 
-<view style="font-size:18px;font-weight:700;margin-bottom:8px;">
-  用药方案（多药）
+<view style="font-size:18px;font-weight:800;margin-bottom:6px;">用药方案</view>
+<view style="color:#666;font-size:12px;line-height:1.6;margin-bottom:14px;">
+  这个页面通常只需要在医生调整方案时改一次。之后每天记录时，我们只问你：今天是否按计划服药、有没有不适/副作用。
 </view>
 
-<view style="color:#666;font-size:13px;line-height:18px;margin-bottom:16px;">
-  这个页面只需要在医生调整方案时改一次。之后每日记录页只问“是否按时服药 / 有没有不适”。
+<!-- 药物列表 -->
+<view style="background:#fff;border:1px solid #eee;border-radius:16px;padding:14px;margin-bottom:14px;">
+  <view style="font-size:16px;font-weight:800;margin-bottom:10px;">药物清单</view>
+
+  <block wx:for="{{meds}}" wx:key="idx">
+    <view style="border:1px solid #eee;border-radius:14px;padding:12px;margin-bottom:12px;">
+
+      <view style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <view style="font-weight:800;">第 {{index + 1}} 种药</view>
+        <button size="mini" plain="true" data-idx="{{index}}" bindtap="removeMed"
+          style="color:#d32f2f;border-color:#f1c7c7;">
+          删除
+        </button>
+      </view>
+
+      <!-- 选择药名 -->
+      <view style="margin-bottom:10px;">
+        <view style="font-size:13px;font-weight:700;margin-bottom:6px;">选择药物</view>
+        <picker mode="selector" range="{{medOptions}}" range-key="name"
+          data-idx="{{index}}" bindchange="onMedPick">
+          <view style="padding:12px;border:1px solid #eee;border-radius:12px;">
+            {{item.name || '点击选择药物'}}
+          </view>
+        </picker>
+        <view style="color:#999;font-size:12px;margin-top:6px;">
+          先做示例列表，后续我们再把常见精神科药物补全。
+        </view>
+      </view>
+
+      <!-- 每日总剂量 -->
+      <view style="margin-bottom:10px;">
+        <view style="font-size:13px;font-weight:700;margin-bottom:6px;">每日总剂量（mg/天）</view>
+        <input type="number" placeholder="例如 200"
+          value="{{item.doseMg}}"
+          data-idx="{{index}}"
+          bindinput="onDoseInput"
+          style="padding:12px;border:1px solid #eee;border-radius:12px;" />
+      </view>
+
+      <!-- 服用时间 -->
+      <view style="margin-bottom:6px;">
+        <view style="font-size:13px;font-weight:700;margin-bottom:6px;">服用时间（可多选）</view>
+        <checkbox-group data-idx="{{index}}" bindchange="onTimesChange">
+          <label style="display:block;padding:6px 0;">
+            <checkbox value="morning" checked="{{item.timesMap.morning}}" /> 早
+          </label>
+          <label style="display:block;padding:6px 0;">
+            <checkbox value="noon" checked="{{item.timesMap.noon}}" /> 中
+          </label>
+          <label style="display:block;padding:6px 0;">
+            <checkbox value="night" checked="{{item.timesMap.night}}" /> 晚
+          </label>
+        </checkbox-group>
+      </view>
+
+    </view>
+  </block>
+
+  <button type="default" plain="true" bindtap="addMed"
+    style="border-radius:14px;border-color:#cfe8d1;color:#2e7d32;font-weight:700;">
+    + 添加一种药
+  </button>
 </view>
 
 <!-- 下次复诊日期 -->
-<view style="font-size:16px;font-weight:600;margin:14px 0 8px;">
-  下次复诊日期
+<view style="background:#fff;border:1px solid #eee;border-radius:16px;padding:14px;margin-bottom:14px;">
+  <view style="font-size:16px;font-weight:800;margin-bottom:10px;">下次复诊日期</view>
+
+  <picker mode="date" value="{{nextVisitDate}}" bindchange="onNextVisitChange">
+    <view style="padding:12px;border:1px solid #eee;border-radius:12px;">
+      {{nextVisitDate || '点击选择日期'}}
+    </view>
+  </picker>
+
+  <view style="color:#999;font-size:12px;margin-top:8px;line-height:1.6;">
+    选择后，后续可以基于这个日期做“复诊前提醒/检查清单”（第二优先级）。
+  </view>
 </view>
 
-<picker mode="date" value="{{nextVisitDate}}" bindchange="onNextVisitChange">
-  <view style="padding:12px;border:1px solid #eee;border-radius:10px;">
-    {{ nextVisitDate || '点击选择日期' }}
-  </view>
-</picker>
-
-<!-- 药物列表 -->
-<view style="font-size:16px;font-weight:600;margin:18px 0 8px;">
-  药物列表（可添加多种）
+<!-- 保存按钮 -->
+<view style="margin-bottom:14px;">
+  <button type="primary" bindtap="savePlan"
+    style="border-radius:14px;font-weight:800;">
+    保存用药方案
+  </button>
 </view>
-
-<block wx:for="{{meds}}" wx:key="idx">
-  <view style="border:1px solid #eee;border-radius:12px;padding:14px;margin-bottom:12px;">
-    <view style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-      <view style="font-weight:600;">第 {{index + 1}} 个药</view>
-      <button size="mini" type="warn" data-idx="{{index}}" bindtap="removeMed">删除</button>
-    </view>
-
-    <!-- 药名 -->
-    <view style="font-size:14px;font-weight:600;margin-bottom:6px;">药物</view>
-    <picker mode="selector"
-            range="{{medOptions}}"
-            value="{{item.nameIndex}}"
-            data-idx="{{index}}"
-            bindchange="onMedNameChange">
-      <view style="padding:10px;border:1px solid #eee;border-radius:10px;">
-        {{ item.name || '点击选择药物' }}
-      </view>
-    </picker>
-
-    <view style="color:#999;font-size:12px;margin-top:6px;">
-      先做示例列表，后续我们再把常见精神科药物补全。
-    </view>
-
-    <!-- 每日总剂量 -->
-    <view style="font-size:14px;font-weight:600;margin:12px 0 6px;">每日总剂量（mg）</view>
-    <input type="number"
-           placeholder="例如 200"
-           value="{{item.totalMgPerDay}}"
-           data-idx="{{index}}"
-           bindinput="onDoseInput"
-           style="padding:10px;border:1px solid #eee;border-radius:10px;" />
-
-    <!-- 服用时间 -->
-    <view style="font-size:14px;font-weight:600;margin:12px 0 6px;">服用时间（可多选）</view>
-
-    <checkbox-group data-idx="{{index}}" bindchange="onTimesChange">
-      <label style="display:flex;align-items:center;padding:6px 0;">
-        <checkbox value="morning" checked="{{item.timesMap.morning}}" /> <text style="margin-left:8px;">早</text>
-      </label>
-      <label style="display:flex;align-items:center;padding:6px 0;">
-        <checkbox value="noon" checked="{{item.timesMap.noon}}" /> <text style="margin-left:8px;">中</text>
-      </label>
-      <label style="display:flex;align-items:center;padding:6px 0;">
-        <checkbox value="night" checked="{{item.timesMap.night}}" /> <text style="margin-left:8px;">晚</text>
-      </label>
-    </checkbox-group>
-
-    <!-- 备注 -->
-    <view style="font-size:14px;font-weight:600;margin:12px 0 6px;">备注（可选）</view>
-    <input type="text"
-           placeholder="例如：睡前服 / 饭后服"
-           value="{{item.remark}}"
-           data-idx="{{index}}"
-           bindinput="onRemarkInput"
-           style="padding:10px;border:1px solid #eee;border-radius:10px;" />
-
-  </view>
-</block>
-
-<button type="default" bindtap="addMed" style="margin:10px 0 18px;">
-  + 添加一个药物
-</button>
-
-<!-- 保存 -->
-<button type="primary" bindtap="savePlan" style="margin-bottom:18px;">
-  保存用药方案
-</button>
 
 <!-- 当前已保存方案 -->
-<view style="font-size:16px;font-weight:600;margin:18px 0 10px;">
-  当前已保存方案
-</view>
+<view style="background:#fff;border:1px solid #eee;border-radius:16px;padding:14px;">
+  <view style="font-size:16px;font-weight:800;margin-bottom:10px;">当前已保存方案</view>
 
-<block wx:if="{{!savedPlan}}">
-  <view style="color:#999;">暂无保存方案</view>
-</block>
+  <block wx:if="{{!savedPlan}}">
+    <view style="color:#999;">暂无已保存方案</view>
+  </block>
 
-<block wx:else>
-  <view style="border:1px solid #eee;border-radius:12px;padding:14px;">
-    <view style="margin-bottom:8px;">
-      下次复诊：{{savedPlan.nextVisitDate || '未填写'}}
-    </view>
-
-    <view style="font-weight:600;margin-bottom:6px;">药物：</view>
-
-    <block wx:for="{{savedPlan.meds}}" wx:key="i">
-      <view style="padding:8px 0;border-bottom:1px solid #f3f3f3;">
-        <view>• {{item.name}}｜{{item.totalMgPerDay}} mg/天</view>
-        <view style="color:#666;font-size:12px;margin-top:2px;">
-          时间：{{item.timesText}}  {{item.remark ? ('｜备注：' + item.remark) : ''}}
-        </view>
+  <block wx:else>
+    <block wx:for="{{savedPlan.meds}}" wx:key="idx">
+      <view style="padding:10px 0;border-bottom:1px solid #f2f2f2;">
+        <view>药物：{{item.name}}</view>
+        <view>剂量：{{item.doseMg}} mg/天</view>
+        <view>时间：{{item.timesText}}</view>
       </view>
     </block>
 
-    <view style="color:#999;font-size:12px;margin-top:10px;">
-      更新于：{{savedPlan.updatedTimeText}}
-    </view>
-  </view>
-</block>
+    <view style="margin-top:10px;">下次复诊：{{savedPlan.nextVisitDate || '未填写'}}</view>
+    <view style="color:#999;font-size:12px;margin-top:6px;">更新于：{{savedPlan.updatedTimeText || ''}}</view>
+  </block>
+</view>
 
+<view style="height:18px;"></view>
 </view>

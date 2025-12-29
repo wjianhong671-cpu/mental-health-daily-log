@@ -1,0 +1,82 @@
+page {
+  background-color: #F5F5F7;
+  min-height: 100vh;
+}
+
+.page-container {
+  padding: 32rpx 40rpx;
+  padding-bottom: 60rpx;
+}
+
+.page-header {
+  margin-bottom: 32rpx;
+}
+
+.page-title {
+  font-size: 44rpx;
+  font-weight: 600;
+  color: #1D1D1F;
+  line-height: 1.2;
+}
+
+.card {
+  background-color: #FFFFFF;
+  border-radius: 32rpx;
+  border: 1px solid #E5E5EA;
+  padding: 32rpx;
+  margin-bottom: 32rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+}
+
+.summary-content {
+  font-size: 28rpx;
+  font-weight: 400;
+  color: #1D1D1F;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.button-container {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.copy-button {
+  width: 100%;
+  height: 88rpx;
+  line-height: 88rpx;
+  background-color: #FFFFFF;
+  color: #1D1D1F;
+  border: 1px solid #1D1D1F;
+  border-radius: 16rpx;
+  font-size: 32rpx;
+  font-weight: 500;
+  padding: 0;
+  margin: 0;
+}
+
+.copy-button::after {
+  border: none;
+}
+
+.export-button {
+  width: 100%;
+  height: 88rpx;
+  line-height: 88rpx;
+  background-color: #1D1D1F;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 16rpx;
+  font-size: 32rpx;
+  font-weight: 500;
+  padding: 0;
+  margin: 0;
+}
+
+.export-button::after {
+  border: none;
+}
+

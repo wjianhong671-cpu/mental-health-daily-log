@@ -1,0 +1,15 @@
+<view class="page-container">
+  <view class="page-header">
+    <view class="page-title">复诊摘要</view>
+  </view>
+
+  <view class="card">
+    <text class="summary-content">{{summaryText}}</text>
+  </view>
+
+  <view class="button-container">
+    <button class="copy-button" bindtap="copySummary">一键复制</button>
+    <button class="export-button" bindtap="exportSummary">导出复诊摘要（长图）</button>
+  </view>
+</view>
+

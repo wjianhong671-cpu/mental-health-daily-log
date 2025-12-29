@@ -6,7 +6,14 @@ Page({
     todayDate: '',
     hasTodayRecord: false,
 
+    // -------- D1 风险（医生端）--------
+    riskSuicidal: 0,        // 0 无 / 1 闪念 / 2 明确
+    riskImpulse: 0,         // 0 无 / 1 增加
+    sleepReduced: false,    // 睡眠明显减少或 ≤4h
+    energyIncreased: false, // 精力更高/停不下来
+
     // -------- 睡眠 --------
+    sleepDurationHour: null, // 昨晚睡眠时长（小时）
     sleepQuality: null,
     sleepIssues: [],
     sleepIssuesMap: {
@@ -20,11 +27,11 @@ Page({
     // -------- 用药方案（来自 med_plan）--------
     hasPlan: false,
     plan: null,
-    requiredTimes: [], // 方案建议顿次（可能是 morning/noon/night 的子集）
+    requiredTimes: [],
     requiredTimesMap: { morning: false, noon: false, night: false },
     requiredTimesText: '未设置方案',
 
-    // -------- 今天用药情况（固定早/中/晚，不少中午）--------
+    // -------- 今天用药情况 --------
     takeMedMap: { morning: false, noon: false, night: false },
 
     // -------- 不适/副作用 --------
@@ -42,7 +49,7 @@ Page({
       other: false,
       none: false
     },
-    sideEffectSeverity: null, // 0/1/2/3
+    sideEffectSeverity: null,
     sideEffectNote: ''
   },
 
@@ -50,48 +57,52 @@ Page({
     const todayDate = new Date().toISOString().slice(0, 10)
     this.setData({ todayDate })
 
-    // 先拉方案（影响“今天用药情况”提示），再拉记录
-    this.loadPlan().finally(() => {
+    if (typeof this.loadPlan === 'function') {
+      this.loadPlan().finally(() => {
+        this.loadRecords()
+      })
+    } else {
       this.loadRecords()
-    })
+    }
   },
 
   onShow() {
-    // 从 plan 页返回时刷新方案
-    this.loadPlan().catch(() => {})
+    if (typeof this.loadPlan === 'function') {
+      this.loadPlan().catch(() => {})
+    }
   },
 
-  // 去用药方案页
   goPlan() {
     wx.navigateTo({ url: '/pages/plan/plan' })
   },
 
-  // 去时间轴页
   goTimeline() {
     wx.navigateTo({ url: '/pages/timeline/timeline' })
   },
 
-  // -------- 交互：情绪/睡眠 --------
+  goDoctor() {
+    wx.navigateTo({ url: '/pages/doctor/doctor' })
+  },
 
+  // -------- 情绪 / 睡眠 --------
   selectMood(e) {
-    const mood = Number(e.currentTarget.dataset.mood)
-    this.setData({ mood })
+    this.setData({ mood: Number(e.currentTarget.dataset.mood) })
+  },
+
+  onSleepDurationChange(e) {
+    this.setData({ sleepDurationHour: Number(e.detail.value) })
   },
 
   onSleepQualityChange(e) {
-    const val = Number(e.detail.value)
-    this.setData({ sleepQuality: val })
+    this.setData({ sleepQuality: Number(e.detail.value) })
   },
 
   onSleepIssuesChange(e) {
     const values = e.detail.value || []
-
-    // 规则：选了 none，则清空其他；选了其他则取消 none
     let finalValues = values
+
     if (values.includes('none') && values.length > 1) {
       finalValues = ['none']
-    } else if (!values.includes('none')) {
-      finalValues = values
     }
 
     const map = {
@@ -108,28 +119,25 @@ Page({
     })
   },
 
-  // -------- 交互：今天用药情况（固定早/中/晚）--------
-
+  // -------- 用药 --------
   onTakeMedChange(e) {
     const values = e.detail.value || []
-    const map = {
-      morning: values.includes('morning'),
-      noon: values.includes('noon'),
-      night: values.includes('night')
-    }
-    this.setData({ takeMedMap: map })
+    this.setData({
+      takeMedMap: {
+        morning: values.includes('morning'),
+        noon: values.includes('noon'),
+        night: values.includes('night')
+      }
+    })
   },
 
-  // -------- 交互：不适/副作用 --------
-
+  // -------- 副作用 --------
   onSideEffectsChange(e) {
     const values = e.detail.value || []
-
     let finalValues = values
+
     if (values.includes('none') && values.length > 1) {
       finalValues = ['none']
-    } else if (!values.includes('none')) {
-      finalValues = values
     }
 
     const map = {
@@ -146,81 +154,23 @@ Page({
       none: finalValues.includes('none')
     }
 
-    const nextData = {
-      sideEffects: finalValues,
-      sideEffectsMap: map
-    }
-
-    // 若选“没有”，清空严重度与备注，避免矛盾
+    const next = { sideEffects: finalValues, sideEffectsMap: map }
     if (finalValues.includes('none')) {
-      nextData.sideEffectSeverity = null
-      nextData.sideEffectNote = ''
+      next.sideEffectSeverity = null
+      next.sideEffectNote = ''
     }
-
-    this.setData(nextData)
+    this.setData(next)
   },
 
   onSideEffectSeverityChange(e) {
-    const val = Number(e.detail.value)
-    this.setData({ sideEffectSeverity: val })
+    this.setData({ sideEffectSeverity: Number(e.detail.value) })
   },
 
   onSideEffectNoteInput(e) {
     this.setData({ sideEffectNote: e.detail.value || '' })
   },
 
-  // -------- 读取用药方案（med_plan）--------
-
-  loadPlan() {
-    const db = wx.cloud.database()
-
-    return db.collection('med_plan')
-      .orderBy('updatedAt', 'desc')
-      .limit(1)
-      .get()
-      .then(res => {
-        const list = res.data || []
-        if (!list.length) {
-          this.setData({
-            hasPlan: false,
-            plan: null,
-            requiredTimes: [],
-            requiredTimesMap: { morning: false, noon: false, night: false },
-            requiredTimesText: '未设置方案'
-          })
-          return
-        }
-
-        const plan = list[0]
-        const requiredTimes = this._deriveRequiredTimes(plan)
-        const requiredTimesMap = {
-          morning: requiredTimes.includes('morning'),
-          noon: requiredTimes.includes('noon'),
-          night: requiredTimes.includes('night')
-        }
-
-        this.setData({
-          hasPlan: true,
-          plan,
-          requiredTimes,
-          requiredTimesMap,
-          requiredTimesText: requiredTimes.length ? this._timesToText(requiredTimes) : '（方案未填写顿次）'
-        })
-      })
-      .catch(err => {
-        console.error('loadPlan error:', err)
-        this.setData({
-          hasPlan: false,
-          plan: null,
-          requiredTimes: [],
-          requiredTimesMap: { morning: false, noon: false, night: false },
-          requiredTimesText: '读取方案失败'
-        })
-      })
-  },
-
-  // -------- 保存每日记录（同日 update / 无则 add）--------
-
+  // -------- 保存每日记录 --------
   saveRecord() {
     if (this.data.mood === null) {
       wx.showToast({ title: '请先选择心情', icon: 'none' })
@@ -235,37 +185,39 @@ Page({
 
     const db = wx.cloud.database()
     const now = new Date()
-    const dateStr = this.data.todayDate || now.toISOString().slice(0, 10)
+    const dateStr = this.data.todayDate
     const timeText = now.toLocaleString()
 
-    // 今天用药情况文本（固定早/中/晚，且可标记“额外记录”）
     const takeMedText = this._takeMedToText(
       this.data.takeMedMap,
       this.data.requiredTimesMap,
       this.data.hasPlan
     )
 
-    // 不适/副作用文本
-    const sideEffectsText = this._sideEffectsToText(this.data.sideEffects || [])
-
-    // 方案快照：永远写对象（不写 null，避免历史类型坑）
-    const planSnapshot = this.data.hasPlan && this.data.plan
+    const planSnapshot = (this.data.hasPlan && this.data.plan)
       ? this._makePlanSnapshot(this.data.plan)
       : {}
 
     const payload = {
       mood: this.data.mood,
 
+      // D1 风险
+      riskSuicidal: this.data.riskSuicidal,
+      riskImpulse: this.data.riskImpulse,
+      sleepReduced: this.data.sleepReduced,
+      energyIncreased: this.data.energyIncreased,
+
+      // 睡眠
+      sleepDurationHour: this.data.sleepDurationHour,
       sleepQuality: this.data.sleepQuality,
       sleepIssues: this.data.sleepIssues,
 
-      // 今天用药情况
+      // 用药
       takeMedMap: this.data.takeMedMap,
       takeMedText,
 
-      // 不适/副作用
+      // 副作用
       sideEffects: this.data.sideEffects,
-      sideEffectsText,
       sideEffectSeverity: this.data.sideEffectSeverity,
       sideEffectNote: this.data.sideEffectNote,
 
@@ -279,37 +231,30 @@ Page({
       .get()
       .then(res => {
         const list = res.data || []
-
-        if (list.length > 0) {
-          const docId = list[0]._id
-          this.setData({ hasTodayRecord: true })
-          return db.collection('daily_records').doc(docId).update({
-            data: {
-              ...payload,
-              updatedAt: now,
-              updatedTimeText: timeText
-            }
+        if (list.length) {
+          return db.collection('daily_records').doc(list[0]._id).update({
+            data: { ...payload, updatedAt: now, updatedTimeText: timeText }
           })
         }
-
-        this.setData({ hasTodayRecord: true })
         return db.collection('daily_records').add({
-          data: {
-            ...payload,
-            date: dateStr,
-            createdAt: now,
-            timeText
-          }
+          data: { ...payload, date: dateStr, createdAt: now, timeText }
         })
       })
       .then(() => {
         wx.hideLoading()
         wx.showToast({ title: '保存成功', icon: 'success' })
 
-        // 清空输入（第二天继续）
         this.setData({
           mood: null,
 
+          // D1 复位
+          riskSuicidal: 0,
+          riskImpulse: 0,
+          sleepReduced: false,
+          energyIncreased: false,
+
+          // 睡眠
+          sleepDurationHour: null,
           sleepQuality: null,
           sleepIssues: [],
           sleepIssuesMap: {
@@ -320,8 +265,10 @@ Page({
             none: false
           },
 
+          // 用药
           takeMedMap: { morning: false, noon: false, night: false },
 
+          // 副作用
           sideEffects: [],
           sideEffectsMap: {
             sleepy: false,
@@ -344,13 +291,76 @@ Page({
       })
       .catch(err => {
         wx.hideLoading()
-        console.error('saveRecord error:', err)
+        console.error(err)
         wx.showToast({ title: '保存失败', icon: 'none' })
       })
   },
 
-  // -------- 读取最近记录 --------
+  // -------- 读取用药方案 --------
+  loadPlan() {
+    const db = wx.cloud.database()
+    return db.collection('med_plan')
+      .orderBy('createdAt', 'desc')
+      .limit(1)
+      .get()
+      .then(res => {
+        const list = res.data || []
+        if (list.length === 0) {
+          this.setData({
+            hasPlan: false,
+            plan: null,
+            requiredTimes: [],
+            requiredTimesMap: { morning: false, noon: false, night: false },
+            requiredTimesText: '未设置方案'
+          })
+          return
+        }
 
+        const plan = list[0]
+        const meds = Array.isArray(plan.meds) ? plan.meds : []
+        const requiredTimes = []
+        const requiredTimesMap = { morning: false, noon: false, night: false }
+
+        meds.forEach(med => {
+          if (Array.isArray(med.times)) {
+            med.times.forEach(time => {
+              if (time === 'morning' || time === 'noon' || time === 'night') {
+                if (!requiredTimes.includes(time)) {
+                  requiredTimes.push(time)
+                }
+                requiredTimesMap[time] = true
+              }
+            })
+          }
+        })
+
+        let requiredTimesText = '未设置方案'
+        if (requiredTimes.length > 0) {
+          const map = { morning: '早', noon: '中', night: '晚' }
+          requiredTimesText = requiredTimes.map(t => map[t]).join('、')
+        }
+
+        this.setData({
+          hasPlan: true,
+          plan: plan,
+          requiredTimes: requiredTimes,
+          requiredTimesMap: requiredTimesMap,
+          requiredTimesText: requiredTimesText
+        })
+      })
+      .catch(err => {
+        console.error('loadPlan error:', err)
+        this.setData({
+          hasPlan: false,
+          plan: null,
+          requiredTimes: [],
+          requiredTimesMap: { morning: false, noon: false, night: false },
+          requiredTimesText: '未设置方案'
+        })
+      })
+  },
+
+  // -------- 读取记录 --------
   loadRecords() {
     const db = wx.cloud.database()
     db.collection('daily_records')
@@ -358,123 +368,26 @@ Page({
       .limit(10)
       .get()
       .then(res => {
-        const records = (res.data || []).map(r => this._decorateRecord(r))
-        const today = this.data.todayDate
-        const hasTodayRecord = records.some(r => r.date === today)
-        this.setData({ records, hasTodayRecord })
-      })
-      .catch(err => {
-        console.error('loadRecords error:', err)
-        wx.showToast({ title: '读取失败', icon: 'none' })
+        this.setData({ records: res.data || [] })
       })
   },
 
-  // -------- helpers：装饰展示字段（避免页面显示 undefined）--------
-
-  _decorateRecord(r) {
-    return {
-      ...r,
-      sleepIssuesText: r.sleepIssuesText || this._sleepIssuesToText(r.sleepIssues || []),
-      sideEffectsText: r.sideEffectsText || this._sideEffectsToText(r.sideEffects || []),
-      sideEffectSeverityText: this._severityToText(r.sideEffectSeverity),
-      timeText: r.timeText || r.updatedTimeText || ''
-    }
-  },
-
-  // 从方案中推导“建议顿次”
-  _deriveRequiredTimes(plan) {
-    const meds = (plan && Array.isArray(plan.meds)) ? plan.meds : []
-    const set = new Set()
-
-    meds.forEach(m => {
-      const times = Array.isArray(m.times) ? m.times : []
-      times.forEach(t => set.add(t))
-    })
-
-    // 固定顺序输出
-    const order = ['morning', 'noon', 'night']
-    return order.filter(x => set.has(x))
-  },
-
-  _timesToText(times) {
-    const map = { morning: '早', noon: '中', night: '晚' }
-    const arr = Array.isArray(times) ? times : []
-    return arr.length ? arr.map(t => map[t] || t).join('、') : '无'
-  },
-
-  // ✅ 今天用药情况文本：固定早/中/晚，并标记“额外记录”
+  // -------- helpers --------
   _takeMedToText(takeMedMap, requiredTimesMap, hasPlan) {
     const map = { morning: '早', noon: '中', night: '晚' }
-    const order = ['morning', 'noon', 'night']
-
-    const base = order
-      .map(k => `${map[k]}${takeMedMap && takeMedMap[k] ? '✓' : '✗'}`)
+    return ['morning', 'noon', 'night']
+      .map(k => `${map[k]}${takeMedMap[k] ? '✓' : '✗'}`)
       .join(' ')
-
-    if (hasPlan && requiredTimesMap) {
-      const extra = order.filter(k => (takeMedMap && takeMedMap[k]) && !requiredTimesMap[k])
-      if (extra.length) {
-        return `${base}（额外记录：${extra.map(k => map[k]).join('、')}）`
-      }
-    }
-
-    return base
   },
 
-  _sleepIssuesToText(arr) {
-    const map = {
-      insomnia: '入睡困难',
-      early_wake: '早醒',
-      dreams: '多梦/噩梦',
-      daytime_sleepy: '白天嗜睡',
-      none: '无'
-    }
-    const a = Array.isArray(arr) ? arr : []
-    if (!a.length) return '未填写'
-    if (a.includes('none')) return '无'
-    return a.map(x => map[x] || x).join('、')
-  },
-
-  _sideEffectsToText(arr) {
-    const map = {
-      sleepy: '嗜睡/发困',
-      dizzy: '头晕',
-      nausea: '恶心/胃不适',
-      anxiety: '焦虑/坐立不安',
-      tremor: '手抖',
-      palpitation: '心悸/心跳快',
-      rash: '皮疹/瘙痒',
-      appetite: '食欲增加',
-      constipation: '便秘',
-      other: '其他',
-      none: '没有'
-    }
-    const a = Array.isArray(arr) ? arr : []
-    if (!a.length) return '未填写'
-    if (a.includes('none')) return '没有'
-    return a.map(x => map[x] || x).join('、')
-  },
-
-  _severityToText(v) {
-    const map = { 0: '不明显', 1: '轻度', 2: '中度', 3: '重度' }
-    if (v === null || v === undefined || v === '') return '未选择'
-    return map[v] || String(v)
-  },
-
-  // 方案快照：只保留关键字段，避免过大/过杂
   _makePlanSnapshot(plan) {
     const meds = Array.isArray(plan.meds) ? plan.meds : []
     return {
       meds: meds.map(m => ({
         name: m.name || '',
-        doseMgPerDay: m.doseMgPerDay || m.dose || '',
-        unit: m.unit || 'mg',
-        times: Array.isArray(m.times) ? m.times : [],
-        note: m.note || ''
-      })),
-      nextVisitDate: plan.nextVisitDate || '',
-      needLabTags: Array.isArray(plan.needLabTags) ? plan.needLabTags : [],
-      updatedTimeText: plan.updatedTimeText || ''
+        doseMgPerDay: m.doseMgPerDay || '',
+        times: Array.isArray(m.times) ? m.times : []
+      }))
     }
   }
 })

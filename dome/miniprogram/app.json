@@ -3,8 +3,13 @@
     "pages/index/index",
     "pages/plan/plan",
     "pages/timeline/timeline",
+    "pages/review/review",
     "pages/lab/lab",
-    "pages/example/index"
+    "pages/example/index",
+    "pages/doctor/doctor",
+    "pages/summary/summary",
+    "pages/visit_prep/visit_prep",
+    "pages/export_summary/export_summary"
   ],
   "window": {
     "backgroundTextStyle": "light",

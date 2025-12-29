@@ -1,0 +1,45 @@
+<!-- miniprogram/pages/review/review.wxml -->
+<view style="padding:16px;background:#f6f6f6;min-height:100vh;">
+
+<view style="font-size:20px;font-weight:800;margin-bottom:12px;">
+  复诊视图
+</view>
+
+<!-- 睡眠汇总模块 -->
+<view style="background:#fff;border:1px solid #eee;border-radius:16px;padding:16px;">
+  <view style="font-size:16px;font-weight:800;margin-bottom:10px;">
+    睡眠汇总｜近 14 天
+  </view>
+
+  <view style="font-size:14px;color:#111;line-height:1.8;">
+
+    <!-- 口径说明（非常重要） -->
+    <view style="margin-bottom:10px;color:#666;font-size:12px;line-height:1.6;">
+      统计口径：近 14 天共 {{countWindow}} 条记录，其中 {{unknownCount}} 天未填写“睡眠时长”；以下分布仅基于 {{countTotal}} 天有效记录。
+    </view>
+
+    <view style="margin-bottom:8px;font-weight:700;">
+      睡眠时长分布（按天数）：
+    </view>
+
+    <view>— 睡眠偏少（&lt; 6h）：{{lowCount}} 天</view>
+    <view>— 睡眠正常（6–9h）：{{normalCount}} 天</view>
+    <view>— 睡眠偏多（&gt; 9h）：{{highCount}} 天</view>
+
+    <view style="margin-top:10px;">
+      平均睡眠时长：{{avgHours}} 小时/晚（共 {{countTotal}} 天有效记录）
+    </view>
+
+    <view style="margin-top:10px;color:#666;">
+      睡眠概述：{{summaryText}}
+    </view>
+
+    <view style="margin-top:12px;font-size:12px;color:#999;line-height:1.6;">
+      注：以上为个人记录的周期汇总，用于复诊交流，不构成医学判断。
+    </view>
+  </view>
+</view>
+
+<view style="height:16px;"></view>
+
+</view>

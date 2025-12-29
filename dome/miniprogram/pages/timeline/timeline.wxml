@@ -4,6 +4,14 @@
 <!-- 标题 -->
 <view style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
   <view style="font-size:20px;font-weight:700;">复诊时间轴</view>
+
+  <!-- ✅ 新增：复诊视图入口 -->
+  <view
+    bindtap="goReview"
+    style="padding:8px 12px;border-radius:10px;font-weight:700;
+           background:#fff;border:1px solid #eee;color:#2e7d32;">
+    复诊视图
+  </view>
 </view>
 
 <!-- 过滤按钮 -->
@@ -82,8 +90,9 @@
         <!-- 主信息 -->
         <view style="font-size:14px;color:#111;line-height:1.8;">
           <view>情绪：{{item.moodText}}</view>
-          <view>睡眠：{{item.sleepText}}</view>
-          <view>睡眠问题：{{item.sleepIssuesText}}</view>
+<view>睡眠：{{item.sleepText}}</view>
+<view>睡眠时长：{{item.sleepDurationText}}</view>
+<view>睡眠问题：{{item.sleepIssuesText}}</view>
 
           <view style="margin-top:6px;">用药方案：{{item.planText}}</view>
           <view>依从性：{{item.takeMedText}}</view>

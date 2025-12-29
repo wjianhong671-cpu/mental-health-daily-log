@@ -1,0 +1,17 @@
+<view class="page">
+  <view class="actions">
+    <button class="btn" bindtap="onGenerate">生成长图</button>
+    <button class="btn secondary" wx:if="{{imgPath}}" bindtap="onSave">保存到相册</button>
+  </view>
+
+  <view class="preview" wx:if="{{imgPath}}">
+    <image class="img" mode="widthFix" src="{{imgPath}}"></image>
+  </view>
+
+  <!-- 画布：隐藏即可，导出用 -->
+  <canvas
+    canvas-id="exportCanvas"
+    id="exportCanvas"
+    style="width: {{canvasWidth}}px; height: {{canvasHeight}}px; position: fixed; left: -9999px; top: -9999px;"
+  ></canvas>
+</view>
