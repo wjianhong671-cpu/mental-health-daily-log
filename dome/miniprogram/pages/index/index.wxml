@@ -1,67 +1,16 @@
 <view style="padding:24px;">
 
-<!-- 医生端预览 -->
-<view style="margin-bottom:16px;">
-  <button size="mini" plain="true" bindtap="goDoctor">医生端预览</button>
-</view>
-
 <!-- 标题 -->
 <view style="font-size:18px;font-weight:600;margin-bottom:12px;">
   今天的情绪状态
 </view>
 
 <!-- 去用药方案 / 去时间轴 -->
-<view style="margin-bottom:16px; display:flex; gap:12px;">
+<view style="margin-bottom:16px; display:flex; gap:12px; flex-wrap:wrap;">
   <button size="mini" plain="true" bindtap="goPlan">设置 / 更新用药方案</button>
   <button size="mini" plain="true" bindtap="goTimeline">复诊时间轴</button>
-</view>
-
-<!-- 风险快速输入（D1） -->
-<view class="risk-card" style="margin-bottom:16px; padding:16px; background-color:#fff; border:1px solid #eee; border-radius:12px;">
-  <view style="font-size:16px;font-weight:600;margin-bottom:12px;">
-    风险快速输入（20秒）
-  </view>
-
-  <!-- 自伤/自杀风险 -->
-  <view style="margin-bottom:12px;">
-    <view style="font-size:14px;font-weight:500;margin-bottom:6px;">自伤/自杀风险</view>
-    <radio-group bindchange="onRiskSuicidalChange">
-      <label style="display:block;padding:4px 0;">
-        <radio value="0" checked="{{riskSuicidal==0}}" /> 无
-      </label>
-      <label style="display:block;padding:4px 0;">
-        <radio value="1" checked="{{riskSuicidal==1}}" /> 闪念
-      </label>
-      <label style="display:block;padding:4px 0;">
-        <radio value="2" checked="{{riskSuicidal==2}}" /> 明确
-      </label>
-    </radio-group>
-  </view>
-
-  <!-- 冲动/失控 -->
-  <view style="margin-bottom:12px;">
-    <view style="font-size:14px;font-weight:500;margin-bottom:6px;">冲动/失控</view>
-    <radio-group bindchange="onRiskImpulseChange">
-      <label style="display:block;padding:4px 0;">
-        <radio value="0" checked="{{riskImpulse==0}}" /> 无
-      </label>
-      <label style="display:block;padding:4px 0;">
-        <radio value="1" checked="{{riskImpulse==1}}" /> 有增加
-      </label>
-    </radio-group>
-  </view>
-
-  <!-- 睡眠明显减少 -->
-  <view style="margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
-    <view style="font-size:14px;font-weight:500;">睡眠明显减少</view>
-    <switch checked="{{sleepReduced}}" bindchange="onSleepReducedChange" />
-  </view>
-
-  <!-- 精力更高/停不下来 -->
-  <view style="margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-    <view style="font-size:14px;font-weight:500;">精力更高/停不下来</view>
-    <switch checked="{{energyIncreased}}" bindchange="onEnergyIncreasedChange" />
-  </view>
+  <button size="mini" plain="true" bindtap="goDoctor">记录分析（医生视图）</button>
+  <button size="mini" plain="true" bindtap="goExport">导出复诊摘要</button>
 </view>
 
 <!-- 情绪选择 -->

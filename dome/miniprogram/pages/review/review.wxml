@@ -42,4 +42,21 @@
 
 <view style="height:16px;"></view>
 
+<!-- 快捷入口 -->
+<view style="display:flex;gap:12px;margin-bottom:14px;">
+  <view
+    bindtap="goDoctor"
+    style="flex:1;background:#fff;border:1px solid #eee;border-radius:12px;
+           padding:14px;font-weight:700;color:#2e7d32;text-align:center;">
+    记录分析（医生视图）
+  </view>
+
+  <view
+    bindtap="goExport"
+    style="flex:1;background:#fff;border:1px solid #eee;border-radius:12px;
+           padding:14px;font-weight:700;color:#2e7d32;text-align:center;">
+    导出复诊摘要
+  </view>
+</view>
+
 </view>

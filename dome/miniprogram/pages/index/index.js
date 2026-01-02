@@ -84,6 +84,110 @@ Page({
     wx.navigateTo({ url: '/pages/doctor/doctor' })
   },
 
+  goExport() {
+    wx.navigateTo({ url: '/pages/export_summary/export_summary' })
+  },
+
+
+  // -------- 加载用药方案 --------
+  async loadPlan() {
+    try {
+      // 获取 openid
+      const app = getApp()
+      const openid = await app.ensureOpenid()
+      
+      // openid 为空时直接返回，不抛错
+      if (!openid) {
+        console.warn('loadPlan: openid not ready, skip')
+        this.setData({
+          hasPlan: false,
+          plan: null,
+          requiredTimes: [],
+          requiredTimesMap: { morning: false, noon: false, night: false },
+          requiredTimesText: '未设置方案'
+        })
+        return
+      }
+      
+      const db = wx.cloud.database()
+      let plan = null
+      
+      // 先尝试查询 is_active: true 的方案
+      try {
+        const activeQuery = db.collection('med_plan')
+          .where({
+            _openid: openid,
+            is_active: true
+          })
+          .orderBy('updatedAt', 'desc')
+          .limit(1)
+        
+        const activeRes = await activeQuery.get()
+        plan = (activeRes.data || [])[0]
+      } catch (err) {
+        // 如果查询 is_active 失败（可能是字段不存在），继续查询所有记录
+        console.warn('loadPlan: query is_active failed, fallback to all records')
+      }
+      
+      // 如果没有 is_active 字段或没有激活方案，则取最近一条
+      if (!plan) {
+        const allQuery = db.collection('med_plan')
+          .where({
+            _openid: openid
+          })
+          .orderBy('updatedAt', 'desc')
+          .limit(1)
+        
+        const allRes = await allQuery.get()
+        plan = (allRes.data || [])[0]
+      }
+      
+      if (plan) {
+        // 处理 requiredTimes：从 plan.meds 中提取所有用药时间
+        const allTimes = new Set()
+        if (Array.isArray(plan.meds)) {
+          plan.meds.forEach(med => {
+            if (Array.isArray(med.times)) {
+              med.times.forEach(time => allTimes.add(time))
+            }
+          })
+        }
+        const requiredTimes = Array.from(allTimes)
+        const requiredTimesMap = {
+          morning: requiredTimes.includes('morning'),
+          noon: requiredTimes.includes('noon'),
+          night: requiredTimes.includes('night')
+        }
+        const requiredTimesText = this._timesToText(requiredTimes)
+        
+        this.setData({
+          hasPlan: true,
+          plan,
+          requiredTimes,
+          requiredTimesMap,
+          requiredTimesText
+        })
+      } else {
+        this.setData({
+          hasPlan: false,
+          plan: null,
+          requiredTimes: [],
+          requiredTimesMap: { morning: false, noon: false, night: false },
+          requiredTimesText: '未设置方案'
+        })
+      }
+    } catch (err) {
+      console.warn('loadPlan error:', err)
+      this.setData({
+        hasPlan: false,
+        plan: null,
+        requiredTimes: [],
+        requiredTimesMap: { morning: false, noon: false, night: false },
+        requiredTimesText: '未设置方案'
+      })
+    }
+  },
+
   // -------- 情绪 / 睡眠 --------
   selectMood(e) {
     this.setData({ mood: Number(e.currentTarget.dataset.mood) })
@@ -171,22 +275,33 @@ Page({
   },
 
   // -------- 保存每日记录 --------
-  saveRecord() {
-    if (this.data.mood === null) {
-      wx.showToast({ title: '请先选择心情', icon: 'none' })
-      return
-    }
-    if (this.data.sleepQuality === null) {
-      wx.showToast({ title: '请先选择睡眠质量', icon: 'none' })
-      return
-    }
+  async saveRecord() {
+    try {
+      if (this.data.mood === null) {
+        wx.showToast({ title: '请先选择心情', icon: 'none' })
+        return
+      }
+      if (this.data.sleepQuality === null) {
+        wx.showToast({ title: '请先选择睡眠质量', icon: 'none' })
+        return
+      }
 
-    wx.showLoading({ title: '保存中...' })
+      // 获取 openid
+      const app = getApp()
+      const openid = await app.ensureOpenid()
+      
+      // openid 为空时提示并返回
+      if (!openid) {
+        wx.showToast({ title: '登录态未就绪，请稍后重试', icon: 'none' })
+        return
+      }
 
-    const db = wx.cloud.database()
-    const now = new Date()
-    const dateStr = this.data.todayDate
-    const timeText = now.toLocaleString()
+      wx.showLoading({ title: '保存中...' })
+
+      const db = wx.cloud.database()
+      const now = Date.now()
+      const dateStr = this.data.todayDate
+      const timeText = new Date(now).toLocaleString()
 
     const takeMedText = this._takeMedToText(
       this.data.takeMedMap,
@@ -226,18 +341,27 @@ Page({
     }
 
     db.collection('daily_records')
-      .where({ date: dateStr })
+      .where({
+        date: dateStr,
+        _openid: openid
+      })
       .limit(1)
       .get()
       .then(res => {
         const list = res.data || []
         if (list.length) {
-          return db.collection('daily_records').doc(list[0]._id).update({
-            data: { ...payload, updatedAt: now, updatedTimeText: timeText }
-          })
+          // 使用 where + _openid 确保只更新当前用户的记录
+          return db.collection('daily_records')
+            .where({
+              _id: list[0]._id,
+              _openid: openid
+            })
+            .update({
+              data: { ...payload, updatedAt: now, updatedTimeText: timeText }
+            })
         }
         return db.collection('daily_records').add({
-          data: { ...payload, date: dateStr, createdAt: now, timeText }
+          data: { ...payload, date: dateStr, createdAt: now, updatedAt: now, timeText }
         })
       })
       .then(() => {
@@ -294,82 +418,45 @@ Page({
         console.error(err)
         wx.showToast({ title: '保存失败', icon: 'none' })
       })
-  },
-
-  // -------- 读取用药方案 --------
-  loadPlan() {
-    const db = wx.cloud.database()
-    return db.collection('med_plan')
-      .orderBy('createdAt', 'desc')
-      .limit(1)
-      .get()
-      .then(res => {
-        const list = res.data || []
-        if (list.length === 0) {
-          this.setData({
-            hasPlan: false,
-            plan: null,
-            requiredTimes: [],
-            requiredTimesMap: { morning: false, noon: false, night: false },
-            requiredTimesText: '未设置方案'
-          })
-          return
-        }
-
-        const plan = list[0]
-        const meds = Array.isArray(plan.meds) ? plan.meds : []
-        const requiredTimes = []
-        const requiredTimesMap = { morning: false, noon: false, night: false }
-
-        meds.forEach(med => {
-          if (Array.isArray(med.times)) {
-            med.times.forEach(time => {
-              if (time === 'morning' || time === 'noon' || time === 'night') {
-                if (!requiredTimes.includes(time)) {
-                  requiredTimes.push(time)
-                }
-                requiredTimesMap[time] = true
-              }
-            })
-          }
-        })
-
-        let requiredTimesText = '未设置方案'
-        if (requiredTimes.length > 0) {
-          const map = { morning: '早', noon: '中', night: '晚' }
-          requiredTimesText = requiredTimes.map(t => map[t]).join('、')
-        }
-
-        this.setData({
-          hasPlan: true,
-          plan: plan,
-          requiredTimes: requiredTimes,
-          requiredTimesMap: requiredTimesMap,
-          requiredTimesText: requiredTimesText
-        })
-      })
-      .catch(err => {
-        console.error('loadPlan error:', err)
-        this.setData({
-          hasPlan: false,
-          plan: null,
-          requiredTimes: [],
-          requiredTimesMap: { morning: false, noon: false, night: false },
-          requiredTimesText: '未设置方案'
-        })
-      })
+    } catch (err) {
+      wx.hideLoading()
+      console.error('saveRecord error:', err)
+      wx.showToast({ title: '保存失败', icon: 'none' })
+    }
   },
 
   // -------- 读取记录 --------
-  loadRecords() {
-    const db = wx.cloud.database()
-    db.collection('daily_records')
-      .orderBy('createdAt', 'desc')
-      .limit(10)
-      .get()
-      .then(res => {
-        this.setData({ records: res.data || [] })
-      })
+  async loadRecords() {
+    try {
+      // 获取 openid
+      const app = getApp()
+      const openid = await app.ensureOpenid()
+      
+      // openid 为空时直接返回，不抛错
+      if (!openid) {
+        console.warn('loadRecords: openid not ready, skip')
+        this.setData({ records: [] })
+        return
+      }
+      
+      const db = wx.cloud.database()
+      db.collection('daily_records')
+        .where({
+          _openid: openid
+        })
+        .orderBy('createdAt', 'desc')
+        .limit(10)
+        .get()
+        .then(res => {
+          this.setData({ records: res.data || [] })
+        })
+        .catch(err => {
+          console.error('loadRecords error:', err)
+        })
+    } catch (err) {
+      console.error('loadRecords error:', err)
+      this.setData({ records: [] })
+    }
   },
 
   // -------- helpers --------
@@ -389,5 +476,12 @@ Page({
         times: Array.isArray(m.times) ? m.times : []
       }))
     }
+  },
+
+  _timesToText(times) {
+    const map = { morning: '早', noon: '中', night: '晚' }
+    const arr = Array.isArray(times) ? times : []
+    if (!arr.length) return '未设置方案'
+    return arr.map(t => map[t] || t).join('、')
   }
 })

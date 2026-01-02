@@ -1,207 +1,221 @@
+// miniprogram/pages/export_summary/export_summary.js
+const doctorHelper = require('../../utils/doctor-helper.js')
+
 Page({
   data: {
+    loading: false,
+    exporting: false,
     summaryText: '',
-    imgPath: '',
-    canvasWidth: 0,
-    canvasHeight: 0
+    canvasWidth: 750,
+    canvasHeight: 1200
   },
 
   onLoad() {
-    const ec = this.getOpenerEventChannel && this.getOpenerEventChannel()
-    if (ec) {
-      ec.on('summaryText', (payload) => {
-        const text = (payload && payload.summaryText) ? String(payload.summaryText) : ''
-        this.setData({ summaryText: text })
+    this.loadSummary()
+  },
+
+  // ===== 加载摘要数据 =====
+  async loadSummary() {
+    try {
+      this.setData({ loading: true })
+
+      // 获取 openid
+      const app = getApp()
+      const openid = await app.ensureOpenid()
+      
+      if (!openid) {
+        console.warn('loadSummary: openid not ready')
+        this.setData({ 
+          summaryText: '登录态未就绪，请稍后重试',
+          loading: false 
+        })
+        return
+      }
+
+      const db = wx.cloud.database()
+      const rangeDays = 7
+      
+      // 计算起始时间戳（近 7 天）
+      const startTs = Date.now() - (rangeDays - 1) * 86400000
+
+      // 查询近 7 天记录
+      const res = await db.collection('daily_records')
+        .where({
+          _openid: openid,
+          createdAt: db.command.gte(startTs)
+        })
+        .orderBy('createdAt', 'desc')
+        .limit(200)
+        .get()
+
+      const rawRecords = res.data || []
+      const validRecords = doctorHelper.getValidRecords(rawRecords)
+
+      if (validRecords.length === 0) {
+        this.setData({
+          summaryText: '近 7 天暂无记录，请先添加记录后再导出',
+          loading: false
+        })
+        return
+      }
+
+      // 使用 doctor-helper 生成摘要
+      const summary = doctorHelper.buildDoctorSummary(validRecords, {
+        rangeDays
+      })
+      
+      const formattedText = doctorHelper.formatDoctorText(summary)
+
+      this.setData({
+        summaryText: formattedText,
+        loading: false
+      })
+    } catch (err) {
+      console.error('loadSummary error:', err)
+      this.setData({
+        summaryText: '加载失败，请稍后重试',
+        loading: false
       })
     }
   },
 
-  // —— 逐字换行（中文必须逐字测宽）——
-  wrapLine(ctx, text, maxWidth) {
-    const lines = []
-    let cur = ''
-
-    for (let i = 0; i < text.length; i++) {
-      const ch = text[i]
-      const test = cur + ch
-      const w = ctx.measureText(test).width
-      if (w > maxWidth && cur) {
-        lines.push(cur)
-        cur = ch
-      } else {
-        cur = test
-      }
-    }
-    if (cur) lines.push(cur)
-    return lines
-  },
-
-  buildLines(ctx, text, maxWidth) {
-    const paragraphs = String(text || '').split('\n')
-    const out = []
-    paragraphs.forEach(p => {
-      const s = String(p || '')
-      if (!s.trim()) {
-        out.push('')
-      } else {
-        out.push(...this.wrapLine(ctx, s, maxWidth))
-      }
-    })
-    return out
-  },
-
-  onGenerate() {
-    const summaryText = (this.data.summaryText || '').trim()
-    if (!summaryText) {
-      wx.showToast({ title: '没有可导出的内容', icon: 'none' })
+  // ===== 导出长图 =====
+  exportImage() {
+    // 防止重复点击
+    if (this.data.exporting) {
       return
     }
 
-    wx.showLoading({ title: '生成中...' })
-
     try {
-      const sys = wx.getSystemInfoSync()
-
-      // ✅ 关键：全部使用 px，不要 rpx，不要 scale
-      const canvasWidth = sys.windowWidth
-
-      const paddingLeft = 18
-      const paddingRight = 18
-      const paddingTop = 18
-      const paddingBottom = 18
-      const maxWidth = canvasWidth - paddingLeft - paddingRight
-
-      // 字体与行距（医生材料）
-      const titleFont = 20
-      const titleLH = 32
-      const subFont = 13
-      const subLH = 20
-      const bodyFont = 15
-      const bodyLH = 26
-
-      const header1 = '复诊摘要（近7天）'
-      const header2 = '基于患者自填记录，仅供门诊沟通参考'
-
-      const now = new Date()
-      const timeText = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
-      const footerText = `生成时间：${timeText}\n仅供门诊沟通参考`
+      this.setData({ exporting: true })
+      wx.showLoading({ title: '生成中...' })
 
       const ctx = wx.createCanvasContext('exportCanvas', this)
+      const { canvasWidth, canvasHeight, summaryText } = this.data
 
-      // —— 先用对应字体测宽并 wrap（非常重要：测宽前要 setFontSize）——
-      ctx.setFontSize(titleFont)
-      const titleLines = this.buildLines(ctx, header1, maxWidth)
-
-      ctx.setFontSize(subFont)
-      const subLines = this.buildLines(ctx, header2, maxWidth)
-
-      ctx.setFontSize(bodyFont)
-      const bodyLines = this.buildLines(ctx, summaryText, maxWidth)
-
-      ctx.setFontSize(subFont)
-      const footerLines = this.buildLines(ctx, footerText, maxWidth)
-
-      // ✅ 高度按 wrap 后行数计算
-      const canvasHeight =
-        paddingTop +
-        titleLines.length * titleLH +
-        8 +
-        subLines.length * subLH +
-        12 +
-        bodyLines.length * bodyLH +
-        12 +
-        footerLines.length * subLH +
-        paddingBottom
-
-      this.setData({ canvasWidth, canvasHeight })
-
-      // ✅ 每次生成先清空（防止叠字）
-      ctx.clearRect(0, 0, canvasWidth, canvasHeight)
-
-      // 白底
+      // 设置背景色
       ctx.setFillStyle('#ffffff')
       ctx.fillRect(0, 0, canvasWidth, canvasHeight)
 
-      let y = paddingTop
-
       // 标题
+      const title = '复诊摘要'
+      ctx.setFontSize(48)
+      ctx.setFillStyle('#2e7d32')
+      ctx.setTextAlign('center')
+      const titleWidth = ctx.measureText(title).width
+      ctx.fillText(title, canvasWidth / 2, 60)
+
+      // 日期范围
+      const dateRange = '统计范围：近 7 天'
+      ctx.setFontSize(28)
+      ctx.setFillStyle('#666666')
+      const dateWidth = ctx.measureText(dateRange).width
+      ctx.fillText(dateRange, canvasWidth / 2, 140)
+
+      // 摘要内容
+      ctx.setFontSize(32)
       ctx.setFillStyle('#000000')
-      ctx.setTextBaseline('top')
-      ctx.setFontSize(titleFont)
-      titleLines.forEach(line => {
-        ctx.fillText(line, paddingLeft, y)
-        y += titleLH
+      ctx.setTextAlign('left')
+      const lines = summaryText.split('\n')
+      const lineHeight = 50
+      const startY = 220
+      const padding = 60
+      const maxWidth = canvasWidth - padding * 2
+
+      lines.forEach((line, index) => {
+        if (!line.trim()) return
+        
+        let y = startY + index * lineHeight
+        if (y + lineHeight > canvasHeight - 100) {
+          return
+        }
+
+        // 简单文本换行处理
+        const textWidth = ctx.measureText(line).width
+        if (textWidth > maxWidth) {
+          // 简单处理：截断
+          const truncated = line.substring(0, Math.floor(line.length * maxWidth / textWidth))
+          ctx.fillText(truncated, padding, y)
+        } else {
+          ctx.fillText(line, padding, y)
+        }
       })
 
-      // 副标题
-      y += 6
-      ctx.setFillStyle('rgba(0,0,0,0.55)')
-      ctx.setFontSize(subFont)
-      subLines.forEach(line => {
-        ctx.fillText(line, paddingLeft, y)
-        y += subLH
-      })
+      // 底部提示
+      const footer = '以上为个人记录汇总，仅供参考'
+      ctx.setFontSize(24)
+      ctx.setFillStyle('#999999')
+      ctx.setTextAlign('center')
+      const footerWidth = ctx.measureText(footer).width
+      ctx.fillText(footer, canvasWidth / 2, canvasHeight - 80)
 
-      // 分隔线
-      y += 8
-      ctx.setFillStyle('rgba(0,0,0,0.18)')
-      ctx.fillRect(paddingLeft, y, maxWidth, 1)
-      y += 12
-
-      // 正文
-      ctx.setFillStyle('#000000')
-      ctx.setFontSize(bodyFont)
-      bodyLines.forEach(line => {
-        ctx.fillText(line, paddingLeft, y)
-        y += bodyLH
-      })
-
-      // 页脚
-      y += 8
-      ctx.setFillStyle('rgba(0,0,0,0.55)')
-      ctx.setFontSize(subFont)
-      footerLines.forEach(line => {
-        ctx.fillText(line, paddingLeft, y)
-        y += subLH
-      })
-
-      // ✅ draw 完再导出
-      ctx.draw(false, () => {
-        wx.canvasToTempFilePath({
-          canvasId: 'exportCanvas',
-          fileType: 'png',
-          quality: 1,
-          success: (res) => {
-            wx.hideLoading()
-            this.setData({ imgPath: res.tempFilePath })
-            wx.showToast({ title: '已生成预览图', icon: 'success' })
-          },
-          fail: (err) => {
-            wx.hideLoading()
-            console.error('canvasToTempFilePath fail:', err)
-            wx.showToast({ title: '生成失败', icon: 'none' })
+      // 绘制到画布（使用 try-catch 包裹回调）
+      try {
+        ctx.draw(false, () => {
+          try {
+            setTimeout(() => {
+              try {
+                // 导出图片
+                wx.canvasToTempFilePath({
+                  canvasId: 'exportCanvas',
+                  success: (res) => {
+                    try {
+                      wx.hideLoading()
+                      
+                      // 保存图片到相册
+                      wx.saveImageToPhotosAlbum({
+                        filePath: res.tempFilePath,
+                        success: () => {
+                          this.setData({ exporting: false })
+                          wx.showToast({ 
+                            title: '已保存到相册', 
+                            icon: 'success' 
+                          })
+                        },
+                        fail: (err) => {
+                          this.setData({ exporting: false })
+                          console.error('saveImageToPhotosAlbum error:', err)
+                          wx.showModal({
+                            title: '保存失败',
+                            content: '保存失败，请尝试直接截图保存',
+                            showCancel: false
+                          })
+                        }
+                      })
+                    } catch (err) {
+                      this._handleExportError(err, '保存图片时')
+                    }
+                  },
+                  fail: (err) => {
+                    this._handleExportError(err, '生成图片时')
+                  }
+                }, this)
+              } catch (err) {
+                this._handleExportError(err, '导出图片时')
+              }
+            }, 500)
+          } catch (err) {
+            this._handleExportError(err, '延迟执行时')
           }
-        }, this)
-      })
-
-    } catch (e) {
-      wx.hideLoading()
-      console.error(e)
-      wx.showToast({ title: '生成失败', icon: 'none' })
+        })
+      } catch (err) {
+        this._handleExportError(err, '绘制画布时')
+      }
+    } catch (err) {
+      this._handleExportError(err, '初始化导出时')
     }
   },
 
-  onSave() {
-    const path = this.data.imgPath
-    if (!path) return
-
-    wx.saveImageToPhotosAlbum({
-      filePath: path,
-      success: () => wx.showToast({ title: '已保存到相册', icon: 'success' }),
-      fail: (err) => {
-        console.error('saveImage fail:', err)
-        wx.showToast({ title: '保存失败', icon: 'none' })
-      }
+  // ===== 统一错误处理 =====
+  _handleExportError(err, context) {
+    wx.hideLoading()
+    this.setData({ exporting: false })
+    console.error(`exportImage error (${context}):`, err)
+    wx.showModal({
+      title: '生成失败',
+      content: '生成失败，请尝试直接截图保存',
+      showCancel: false
     })
   }
 })
+

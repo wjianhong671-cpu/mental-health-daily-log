@@ -1,17 +1,57 @@
-<view class="page">
-  <view class="actions">
-    <button class="btn" bindtap="onGenerate">生成长图</button>
-    <button class="btn secondary" wx:if="{{imgPath}}" bindtap="onSave">保存到相册</button>
-  </view>
-
-  <view class="preview" wx:if="{{imgPath}}">
-    <image class="img" mode="widthFix" src="{{imgPath}}"></image>
-  </view>
-
-  <!-- 画布：隐藏即可，导出用 -->
-  <canvas
-    canvas-id="exportCanvas"
-    id="exportCanvas"
-    style="width: {{canvasWidth}}px; height: {{canvasHeight}}px; position: fixed; left: -9999px; top: -9999px;"
-  ></canvas>
+<!-- miniprogram/pages/export_summary/export_summary.wxml -->
+<view style="padding:20px;background:#f6f6f6;min-height:100vh;">
+  
+<view style="font-size:20px;font-weight:800;margin-bottom:12px;">
+  导出复诊摘要
 </view>
+
+<view style="background:#fff;border:1px solid #eee;border-radius:16px;padding:16px;margin-bottom:16px;">
+  <view style="font-size:14px;color:#666;line-height:1.8;margin-bottom:12px;">
+    以下为近 7 天的记录摘要，可用于复诊时与医生沟通。
+  </view>
+
+  <block wx:if="{{loading}}">
+    <view style="text-align:center;padding:40px;color:#999;">
+      加载中...
+    </view>
+  </block>
+
+  <block wx:elif="{{!summaryText}}">
+    <view style="text-align:center;padding:40px;color:#999;">
+      暂无数据
+    </view>
+  </block>
+
+  <block wx:else>
+    <view style="font-size:14px;color:#111;line-height:2;white-space:pre-wrap;">
+      {{summaryText}}
+    </view>
+  </block>
+</view>
+
+<!-- 导出按钮 -->
+<view style="margin-bottom:16px;">
+  <button type="primary" bindtap="exportImage" disabled="{{loading || exporting || !summaryText}}"
+    style="border-radius:14px;font-weight:800;">
+    {{exporting ? '生成中...' : '生成并保存长图'}}
+  </button>
+</view>
+
+<!-- 提示 -->
+<view style="background:#fff3cd;border:1px solid #ffc107;border-radius:12px;padding:12px;margin-bottom:16px;">
+  <view style="font-size:13px;color:#856404;line-height:1.6;">
+    <view style="font-weight:700;margin-bottom:4px;">使用提示：</view>
+    <view>1. 点击"生成并保存长图"后，图片将保存到手机相册</view>
+    <view>2. 如果生成失败，可以尝试直接截图保存当前页面</view>
+    <view>3. 导出内容仅供参考，不构成医学判断</view>
+  </view>
+</view>
+
+<!-- Canvas 画布（隐藏） -->
+<canvas 
+  canvas-id="exportCanvas"
+  style="position:fixed;left:-9999px;width:750px;height:1200px;">
+</canvas>
+
+</view>
+

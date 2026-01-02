@@ -34,37 +34,52 @@ const getMiniProgramCode = async () => {
 const createCollection = async () => {
   try {
     // 创建集合
-    await db.createCollection("sales");
-    await db.collection("sales").add({
+    await db.createCollection("daily_records");
+    const wxContext = cloud.getWXContext();
+    const now = Date.now();
+    // 注意：示例数据需要包含 _openid，否则在启用安全规则后会失败
+    await db.collection("daily_records").add({
       // data 字段表示需新增的 JSON 数据
       data: {
         region: "华东",
         city: "上海",
         sales: 11,
+        _openid: wxContext.OPENID,
+        createdAt: now,
+        updatedAt: now,
       },
     });
-    await db.collection("sales").add({
+    await db.collection("daily_records").add({
       // data 字段表示需新增的 JSON 数据
       data: {
         region: "华东",
         city: "南京",
         sales: 11,
+        _openid: wxContext.OPENID,
+        createdAt: now,
+        updatedAt: now,
       },
     });
-    await db.collection("sales").add({
+    await db.collection("daily_records").add({
       // data 字段表示需新增的 JSON 数据
       data: {
         region: "华南",
         city: "广州",
         sales: 22,
+        _openid: wxContext.OPENID,
+        createdAt: now,
+        updatedAt: now,
       },
     });
-    await db.collection("sales").add({
+    await db.collection("daily_records").add({
       // data 字段表示需新增的 JSON 数据
       data: {
         region: "华南",
         city: "深圳",
         sales: 22,
+        _openid: wxContext.OPENID,
+        createdAt: now,
+        updatedAt: now,
       },
     });
     return {
@@ -82,22 +97,32 @@ const createCollection = async () => {
 // 查询数据
 const selectRecord = async () => {
   // 返回数据库查询结果
-  return await db.collection("sales").get();
+  const wxContext = cloud.getWXContext();
+  return await db.collection("daily_records")
+    .where({
+      _openid: wxContext.OPENID
+    })
+    .orderBy('createdAt', 'desc')
+    .get();
 };
 
 // 更新数据
 const updateRecord = async (event) => {
   try {
+    const wxContext = cloud.getWXContext();
+    const now = Date.now();
     // 遍历修改数据库信息
     for (let i = 0; i < event.data.length; i++) {
       await db
-        .collection("sales")
+        .collection("daily_records")
         .where({
           _id: event.data[i]._id,
+          _openid: wxContext.OPENID
         })
         .update({
           data: {
             sales: event.data[i].sales,
+            updatedAt: now,
           },
         });
     }
@@ -116,13 +141,18 @@ const updateRecord = async (event) => {
 // 新增数据
 const insertRecord = async (event) => {
   try {
+    const wxContext = cloud.getWXContext();
     const insertRecord = event.data;
+    const now = Date.now();
     // 插入数据
-    await db.collection("sales").add({
+    await db.collection("daily_records").add({
       data: {
         region: insertRecord.region,
         city: insertRecord.city,
         sales: Number(insertRecord.sales),
+        _openid: wxContext.OPENID,
+        createdAt: now,
+        updatedAt: now,
       },
     });
     return {
@@ -140,10 +170,12 @@ const insertRecord = async (event) => {
 // 删除数据
 const deleteRecord = async (event) => {
   try {
+    const wxContext = cloud.getWXContext();
     await db
-      .collection("sales")
+      .collection("daily_records")
       .where({
         _id: event.data._id,
+        _openid: wxContext.OPENID
       })
       .remove();
     return {

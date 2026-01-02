@@ -34,21 +34,45 @@ Page({
   },
 
   // =============== 核心：读取 daily_records + lab_results 合并成时间轴 ===============
-  loadTimeline() {
-    wx.showLoading({ title: '加载中...' })
-    const db = wx.cloud.database()
+  async loadTimeline() {
+    try {
+      // 获取 openid
+      const app = getApp()
+      const openid = await app.ensureOpenid()
+      
+      // openid 为空时直接返回
+      if (!openid) {
+        console.warn('loadTimeline: openid not ready, skip')
+        this.setData({ items: [] })
+        return
+      }
+      
+      wx.showLoading({ title: '加载中...' })
+      const db = wx.cloud.database()
 
-    const filter = this.data.filter
-    const needDaily = (filter === 'all' || filter === 'daily')
-    const needLab = (filter === 'all' || filter === 'lab')
+      const filter = this.data.filter
+      const needDaily = (filter === 'all' || filter === 'daily')
+      const needLab = (filter === 'all' || filter === 'lab')
 
-    const dailyPromise = needDaily
-      ? db.collection('daily_records').orderBy('createdAt', 'desc').limit(50).get()
-      : Promise.resolve({ data: [] })
+      const dailyPromise = needDaily
+        ? db.collection('daily_records')
+            .where({
+              _openid: openid
+            })
+            .orderBy('createdAt', 'desc')
+            .limit(50)
+            .get()
+        : Promise.resolve({ data: [] })
 
     // 你现在可能还没建 lab_results 集合，所以这里做容错：查不到就当空数组
     const labPromise = needLab
-      ? db.collection('lab_results').orderBy('createdAt', 'desc').limit(50).get()
+      ? db.collection('lab_results')
+          .where({
+            _openid: openid
+          })
+          .orderBy('createdAt', 'desc')
+          .limit(50)
+          .get()
           .catch(err => {
             console.warn('lab_results not ready:', err)
             return { data: [] }
@@ -73,6 +97,11 @@ Page({
         console.error('loadTimeline error:', err)
         wx.showToast({ title: '加载失败', icon: 'none' })
       })
+    } catch (err) {
+      wx.hideLoading()
+      console.error('loadTimeline error:', err)
+      wx.showToast({ title: '加载失败', icon: 'none' })
+    }
   },
 
   // ===================== mapping helpers：把原始数据翻译成人话 =====================

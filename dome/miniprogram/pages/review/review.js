@@ -35,21 +35,36 @@ Page({
   },
 
   // ===== 主入口：加载并统计 =====
-  loadSleepSummary() {
-    wx.showLoading({ title: '加载中...' })
+  async loadSleepSummary() {
+    try {
+      // 获取 openid
+      const app = getApp()
+      const openid = await app.ensureOpenid()
+      
+      // openid 为空时直接返回
+      if (!openid) {
+        console.warn('loadSleepSummary: openid not ready, skip')
+        this.setData({ summaryText: '加载失败，请稍后重试。' })
+        return
+      }
+      
+      wx.showLoading({ title: '加载中...' })
 
-    const db = wx.cloud.database()
-    const days = this.data.days
-    const startDateStr = this._getDateNDaysAgo(days - 1) // 含今天，共 N 天窗口
+      const db = wx.cloud.database()
+      const days = this.data.days
+      
+      // 计算起始时间戳（N 天前），使用 createdAt 作为主过滤条件
+      const startTs = Date.now() - (days - 1) * 24 * 60 * 60 * 1000
 
-    // 取近N天记录（不强制必须有 sleepDurationHour，因为我们要算 unknownCount）
-    db.collection('daily_records')
-      .where({
-        date: db.command.gte(startDateStr)
-      })
-      .orderBy('date', 'desc')
-      .limit(200)
-      .get()
+      // 取近N天记录（不强制必须有 sleepDurationHour，因为我们要算 unknownCount）
+      db.collection('daily_records')
+        .where({
+          createdAt: db.command.gte(startTs),
+          _openid: openid
+        })
+        .orderBy('createdAt', 'desc')
+        .limit(200)
+        .get()
       .then(res => {
         const list = res.data || []
         const countWindow = list.length
@@ -88,6 +103,12 @@ Page({
         wx.showToast({ title: '加载失败', icon: 'none' })
         this.setData({ summaryText: '加载失败，请稍后重试。' })
       })
+    } catch (err) {
+      wx.hideLoading()
+      console.error('loadSleepSummary error:', err)
+      wx.showToast({ title: '加载失败', icon: 'none' })
+      this.setData({ summaryText: '加载失败，请稍后重试。' })
+    }
   },
 
   // ===== 统计逻辑 =====
@@ -169,5 +190,14 @@ Page({
     const d = new Date()
     d.setDate(d.getDate() - n)
     return d.toISOString().slice(0, 10)
+  },
+
+  // ===== 导航方法 =====
+  goDoctor() {
+    wx.navigateTo({ url: '/pages/doctor/doctor' })
+  },
+
+  goExport() {
+    wx.navigateTo({ url: '/pages/export_summary/export_summary' })
   }
 })

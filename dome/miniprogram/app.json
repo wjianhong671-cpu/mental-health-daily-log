@@ -4,17 +4,13 @@
     "pages/plan/plan",
     "pages/timeline/timeline",
     "pages/review/review",
-    "pages/lab/lab",
-    "pages/example/index",
     "pages/doctor/doctor",
-    "pages/summary/summary",
-    "pages/visit_prep/visit_prep",
     "pages/export_summary/export_summary"
   ],
   "window": {
     "backgroundTextStyle": "light",
     "navigationBarBackgroundColor": "#F6F6F6",
-    "navigationBarTitleText": "基础能力",
+    "navigationBarTitleText": "记录",
     "navigationBarTextStyle": "black"
   },
   "sitemapLocation": "sitemap.json",

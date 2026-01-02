@@ -1,219 +1,103 @@
-<view class="page-container">
-  <!-- 页面标题区 -->
-  <view class="page-header">
-    <view class="page-title">医生概览</view>
-    <view class="page-subtitle">近7天摘要（基于患者自填）</view>
-  </view>
+<!--miniprogram/pages/doctor/doctor.wxml-->
+<view class="container">
+  <!-- 加载中 -->
+  <block wx:if="{{loading}}">
+    <view class="loading">加载中...</view>
+  </block>
 
-  <!-- 风险信号总览（D1） -->
-  <view class="card">
-    <view class="card-title">风险信号总览（D1）</view>
-    
-    <view class="card-row">
-      <view class="row-left">
-        <view class="row-title-group">
-          <text class="status-badge status-badge-{{riskSummary.suicidal.level}}">{{riskSummary.suicidal.level === 'red' ? '高风险' : riskSummary.suicidal.level === 'orange' ? '中风险' : '低风险'}}</text>
-          <text class="row-title">自伤/自杀</text>
+  <!-- 空状态 -->
+  <block wx:elif="{{empty}}">
+    <view class="empty-state">
+      <view class="empty-icon">📋</view>
+      <view class="empty-text">暂无记录数据</view>
+      <view class="empty-hint">请先添加一条记录</view>
+    </view>
+  </block>
+
+  <!-- 有数据 -->
+  <block wx:else>
+    <!-- 统计范围切换 -->
+    <view class="range-selector">
+      <view 
+        class="range-item {{rangeDays === 7 ? 'active' : ''}}"
+        data-days="7"
+        bindtap="changeRange">
+        近7天
+      </view>
+      <view 
+        class="range-item {{rangeDays === 14 ? 'active' : ''}}"
+        data-days="14"
+        bindtap="changeRange">
+        近14天
+      </view>
+      <view 
+        class="range-item {{rangeDays === 30 ? 'active' : ''}}"
+        data-days="30"
+        bindtap="changeRange">
+        近30天
+      </view>
+    </view>
+
+    <!-- 摘要卡片 -->
+    <view class="summary-card" wx:if="{{summary}}">
+      <!-- 情绪统计 -->
+      <view class="summary-section" wx:if="{{summary.mood && summary.mood.count > 0}}">
+        <view class="section-title">情绪评分</view>
+        <view class="section-content">
+          <view>平均：{{summary.mood.avg}}</view>
+          <view>范围：{{summary.mood.min}} - {{summary.mood.max}}</view>
+          <view>记录数：{{summary.mood.count}}</view>
         </view>
-        <text class="row-desc">{{riskSummary.suicidal.text}}</text>
       </view>
-      <view class="row-right">
-        <text class="row-meta">{{riskSummary.suicidal.lastDate}} · {{riskSummary.suicidal.count}}/7</text>
-      </view>
-    </view>
 
-    <view class="spacer"></view>
-
-    <view class="card-row">
-      <view class="row-left">
-        <view class="row-title-group">
-          <text class="status-badge status-badge-{{riskSummary.impulse.level}}">{{riskSummary.impulse.level === 'red' ? '高风险' : riskSummary.impulse.level === 'orange' ? '中风险' : '低风险'}}</text>
-          <text class="row-title">冲动失控</text>
+      <!-- 睡眠统计 -->
+      <view class="summary-section" wx:if="{{summary.sleep}}">
+        <view class="section-title">睡眠时长</view>
+        <view class="section-content">
+          <view>平均：{{summary.sleep.avgHours}} 小时</view>
+          <view>范围：{{summary.sleep.minHours}} - {{summary.sleep.maxHours}} 小时</view>
+          <view>记录数：{{summary.sleep.count}}</view>
         </view>
-        <text class="row-desc">{{riskSummary.impulse.text}}</text>
       </view>
-      <view class="row-right">
-        <text class="row-meta">{{riskSummary.impulse.lastDate}} · {{riskSummary.impulse.count}}/7</text>
-      </view>
-    </view>
 
-    <view class="spacer"></view>
-
-    <view class="card-row">
-      <view class="row-left">
-        <view class="row-title-group">
-          <text class="status-badge status-badge-{{riskSummary.mania.level}}">{{riskSummary.mania.level === 'red' ? '高风险' : riskSummary.mania.level === 'orange' ? '中风险' : '低风险'}}</text>
-          <text class="row-title">躁转风险（睡眠骤减+精力上升）</text>
+      <!-- 用药统计 -->
+      <view class="summary-section" wx:if="{{summary.meds}}">
+        <view class="section-title">用药情况</view>
+        <view class="section-content">
+          <view wx:if="{{summary.meds.names.length > 0}}">
+            药物：{{summary.meds.names.join('、')}}
+          </view>
+          <view wx:if="{{summary.meds.changed}}">（期间有用药变更）</view>
+          <view wx:if="{{summary.meds.complianceRate !== null}}">
+            依从性：{{summary.meds.complianceRate}}%
+          </view>
         </view>
-        <text class="row-desc">{{riskSummary.mania.text}}</text>
       </view>
-      <view class="row-right">
-        <text class="row-meta">{{riskSummary.mania.lastDate}} · {{riskSummary.mania.count}}/7</text>
+
+      <!-- 副作用 -->
+      <view class="summary-section" wx:if="{{summary.sideEffectsTop.length > 0}}">
+        <view class="section-title">常见副作用</view>
+        <view class="section-content">
+          {{summary.sideEffectsTop.join('、')}}
+        </view>
       </view>
-    </view>
-  </view>
 
-  <!-- 睡眠结构摘要（D4） -->
-  <view class="card">
-    <view class="card-title">睡眠结构摘要（近7天）</view>
-    
-    <view class="summary-row">
-      <text class="summary-text">近7天平均睡眠 {{sleepSummary.avgHours}} 小时</text>
-    </view>
-
-    <view class="spacer-large"></view>
-
-    <view class="evidence-row">
-      <view class="row-left">
-        <text class="evidence-label">睡眠质量分布</text>
+      <!-- 风险提示 -->
+      <view class="risk-warning" wx:if="{{summary.hasRisk}}">
+        ⚠️ 存在风险标记，请重点关注
       </view>
-      <view class="row-right">
-        <text class="evidence-value">优({{sleepSummary.qualityCounts[5]}}) 良({{sleepSummary.qualityCounts[4]}}) 一般({{sleepSummary.qualityCounts[3]}}) 差({{sleepSummary.qualityCounts[2]}}) 很差({{sleepSummary.qualityCounts[1]}})</text>
-      </view>
-    </view>
 
-    <view class="spacer"></view>
-
-    <view class="evidence-row">
-      <view class="row-left">
-        <text class="evidence-label">睡眠问题出现天数</text>
-      </view>
-      <view class="row-right">
-        <text class="evidence-value">入睡困难({{sleepSummary.issuesDays.insomnia}}) 早醒({{sleepSummary.issuesDays.early_wake}}) 多梦/噩梦({{sleepSummary.issuesDays.dreams}}) 白天嗜睡({{sleepSummary.issuesDays.daytime_sleepy}})</text>
+      <!-- 备注 -->
+      <view class="summary-section" wx:if="{{summary.notes.length > 0}}">
+        <view class="section-title">备注记录</view>
+        <view class="section-content">
+          <view wx:for="{{summary.notes}}" wx:key="index" class="note-item">
+            <view class="note-date">{{item.date}}</view>
+            <view class="note-text">{{item.note}}</view>
+          </view>
+        </view>
       </view>
     </view>
-
-    <view class="spacer"></view>
-
-    <view class="evidence-row">
-      <view class="row-left">
-        <text class="evidence-label">数据完整性</text>
-      </view>
-      <view class="row-right">
-        <text class="evidence-meta">{{sleepSummary.validDays}}/7</text>
-      </view>
-    </view>
-  </view>
-
-  <!-- 情绪与激活趋势（D2+D3） -->
-  <view class="card">
-    <view class="card-title">情绪与激活趋势（近7天）</view>
-    
-    <view class="summary-row">
-      <text class="summary-text">近7天情绪整体{{moodSummary.variabilityText}}</text>
-    </view>
-
-    <view class="spacer-large"></view>
-
-    <view class="evidence-row">
-      <view class="row-left">
-        <text class="evidence-label">情绪均值</text>
-      </view>
-      <view class="row-right">
-        <text class="evidence-meta">{{moodSummary.avgMood}}</text>
-      </view>
-    </view>
-
-    <view class="spacer"></view>
-
-    <view class="evidence-row">
-      <view class="row-left">
-        <text class="evidence-label">情绪范围</text>
-      </view>
-      <view class="row-right">
-        <text class="evidence-meta">{{moodSummary.minMood}}–{{moodSummary.maxMood}}</text>
-      </view>
-    </view>
-
-    <view class="spacer"></view>
-
-    <view class="evidence-row">
-      <view class="row-left">
-        <text class="evidence-label">激活信号</text>
-      </view>
-      <view class="row-right">
-        <text class="evidence-meta">近7天出现 {{moodSummary.activationDays}} 天</text>
-      </view>
-    </view>
-  </view>
-
-  <!-- 用药稳定性（D6） -->
-  <view class="card">
-    <view class="card-title">用药稳定性（近7天）</view>
-    
-    <view class="summary-row">
-      <text class="summary-text-main">{{medStability.summaryText}}</text>
-    </view>
-
-    <view class="spacer-large"></view>
-
-    <view class="evidence-row">
-      <view class="row-left">
-        <text class="evidence-label">数据完整性</text>
-      </view>
-      <view class="row-right">
-        <text class="evidence-meta">{{medStability.validDays}}/7</text>
-      </view>
-    </view>
-
-    <view class="spacer"></view>
-
-    <view class="evidence-row">
-      <view class="row-left">
-        <text class="evidence-label">漏服/未按方案</text>
-      </view>
-      <view class="row-right">
-        <text class="evidence-meta">{{medStability.missDays}} 天</text>
-      </view>
-    </view>
-
-    <view class="spacer"></view>
-
-    <view class="evidence-row">
-      <view class="row-left">
-        <text class="evidence-label">额外用药记录</text>
-      </view>
-      <view class="row-right">
-        <text class="evidence-meta">{{medStability.extraDays}} 天</text>
-      </view>
-    </view>
-  </view>
-
-  <!-- 不良体验摘要（D5） -->
-  <view class="card">
-    <view class="card-title">不良体验摘要（近7天）</view>
-    
-    <view class="summary-row">
-      <text class="summary-text">近7天以{{adverseSummary.topEffectsText}}为主，最高{{adverseSummary.maxSeverityText}}</text>
-    </view>
-
-    <view class="spacer-large"></view>
-
-    <view class="evidence-row">
-      <view class="row-left">
-        <text class="evidence-label">出现天数</text>
-      </view>
-      <view class="row-right">
-        <text class="evidence-meta">{{adverseSummary.effectDays}}/7</text>
-      </view>
-    </view>
-
-    <view class="spacer"></view>
-
-    <view class="evidence-row">
-      <view class="row-left">
-        <text class="evidence-label">最近出现</text>
-      </view>
-      <view class="row-right">
-        <text class="evidence-meta">{{adverseSummary.lastDate}}</text>
-      </view>
-    </view>
-  </view>
-
-  <!-- 按钮区 -->
-  <view class="button-container">
-    <button class="action-button" bindtap="goVisitPrep">复诊准备</button>
-    <view class="button-spacer"></view>
-    <button class="summary-button" bindtap="goSummary">生成复诊摘要</button>
-  </view>
+  </block>
 </view>
+

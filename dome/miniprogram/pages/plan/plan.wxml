@@ -1,3 +1,4 @@
+<!-- miniprogram/pages/plan/plan.wxml -->
 <view style="padding:20px;background:#f6f6f6;min-height:100vh;">
 
 <view style="font-size:18px;font-weight:800;margin-bottom:6px;">用药方案</view>
@@ -20,28 +21,73 @@
         </button>
       </view>
 
-      <!-- 选择药名 -->
+      <!-- 选择药名（联想输入） -->
       <view style="margin-bottom:10px;">
         <view style="font-size:13px;font-weight:700;margin-bottom:6px;">选择药物</view>
-        <picker mode="selector" range="{{medOptions}}" range-key="name"
-          data-idx="{{index}}" bindchange="onMedPick">
-          <view style="padding:12px;border:1px solid #eee;border-radius:12px;">
-            {{item.name || '点击选择药物'}}
-          </view>
-        </picker>
-        <view style="color:#999;font-size:12px;margin-top:6px;">
-          先做示例列表，后续我们再把常见精神科药物补全。
+
+        <view style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+          <input
+            value="{{item.name}}"
+            data-idx="{{index}}"
+            bindfocus="onMedNameFocus"
+            bindinput="onMedNameInput"
+            bindblur="onMedNameBlur"
+            placeholder="输入药名/别名（如 奎 / 思瑞康 / Seroquel）"
+            style="flex:1;padding:12px;border:1px solid #eee;border-radius:12px;background:#fff;" />
+          <button size="mini" plain="true" data-idx="{{index}}" bindtap="onClearMedName">清空</button>
+        </view>
+
+        <!-- 锁定状态提示（可选，但很有用） -->
+        <view wx:if="{{item.name && !item.nameLocked}}"
+              style="color:#d32f2f;font-size:12px;margin-top:-2px;margin-bottom:6px;">
+          请从下方候选中点选药物（不要只输入文字）
+        </view>
+
+        <!-- 候选列表：有建议就显示 -->
+        <view wx:if="{{activeMedIdx===index && suggestions.length}}"
+              style="margin-top:8px;border:1px solid #eee;border-radius:12px;overflow:hidden;background:#fff;position:relative;z-index:999;">
+          <block wx:for="{{suggestions}}" wx:key="id">
+            <view data-idx="{{index}}" data-medid="{{item.id}}" bindtap="onPickSuggestion"
+                  style="padding:10px 12px;border-bottom:1px solid #f2f2f2;">
+              <view style="font-weight:700;">{{item.name}}</view>
+              <view style="font-size:12px;color:#999;">{{item.aliasText}}</view>
+            </view>
+          </block>
+        </view>
+
+        <!-- 候选列表：无结果但输入不为空 -> 给反馈（避免“消失”困惑） -->
+        <view wx:if="{{activeMedIdx===index && !suggestions.length && item.name}}"
+              style="margin-top:8px;border:1px solid #eee;border-radius:12px;background:#fff;padding:10px 12px;color:#999;font-size:12px;">
+          未匹配到药物（请换个关键词，或确认是否为通用名/常见别名）
         </view>
       </view>
 
       <!-- 每日总剂量 -->
       <view style="margin-bottom:10px;">
-        <view style="font-size:13px;font-weight:700;margin-bottom:6px;">每日总剂量（mg/天）</view>
-        <input type="number" placeholder="例如 200"
-          value="{{item.doseMg}}"
-          data-idx="{{index}}"
-          bindinput="onDoseInput"
-          style="padding:12px;border:1px solid #eee;border-radius:12px;" />
+        <view style="font-size:13px;font-weight:700;margin-bottom:6px;">每日总剂量</view>
+        <view style="display:flex;align-items:center;gap:8px;">
+          <input type="digit" placeholder="输入数值"
+            value="{{item.doseValue}}"
+            data-idx="{{index}}"
+            bindinput="onDoseInput"
+            style="flex:1;padding:12px;border:1px solid #eee;border-radius:12px;" />
+          <view style="display:flex;border:1px solid #eee;border-radius:12px;overflow:hidden;">
+            <view
+              data-idx="{{index}}"
+              data-unit="mg"
+              bindtap="onDoseUnitChange"
+              style="padding:12px 16px;background:{{item.doseUnit === 'mg' ? '#4caf50' : '#fff'}};color:{{item.doseUnit === 'mg' ? '#fff' : '#333'}};font-weight:{{item.doseUnit === 'mg' ? '700' : '400'}};border-right:1px solid #eee;">
+              mg
+            </view>
+            <view
+              data-idx="{{index}}"
+              data-unit="g"
+              bindtap="onDoseUnitChange"
+              style="padding:12px 16px;background:{{item.doseUnit === 'g' ? '#4caf50' : '#fff'}};color:{{item.doseUnit === 'g' ? '#fff' : '#333'}};font-weight:{{item.doseUnit === 'g' ? '700' : '400'}};">
+              g
+            </view>
+          </view>
+        </view>
       </view>
 
       <!-- 服用时间 -->
@@ -86,8 +132,7 @@
 
 <!-- 保存按钮 -->
 <view style="margin-bottom:14px;">
-  <button type="primary" bindtap="savePlan"
-    style="border-radius:14px;font-weight:800;">
+  <button type="primary" bindtap="savePlan" style="border-radius:14px;font-weight:800;">
     保存用药方案
   </button>
 </view>
@@ -104,7 +149,7 @@
     <block wx:for="{{savedPlan.meds}}" wx:key="idx">
       <view style="padding:10px 0;border-bottom:1px solid #f2f2f2;">
         <view>药物：{{item.name}}</view>
-        <view>剂量：{{item.doseMg}} mg/天</view>
+        <view>剂量：{{item.doseValue || item.doseMg || ''}} {{item.doseUnit || 'mg'}}/天</view>
         <view>时间：{{item.timesText}}</view>
       </view>
     </block>
@@ -115,4 +160,10 @@
 </view>
 
 <view style="height:18px;"></view>
+
+<!-- 调试面板（开发期） -->
+<view style="position:fixed;left:10px;right:10px;bottom:10px;background:rgba(0,0,0,0.6);color:#fff;padding:8px 10px;border-radius:10px;font-size:12px;z-index:9999;">
+  activeMedIdx={{activeMedIdx}} | suggestions={{suggestions.length}}
+</view>
+
 </view>
